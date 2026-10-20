@@ -66,4 +66,11 @@ describe("buildOrderBy", () => {
     expect(buildOrderBy(undefined)).toEqual([{ createdAt: "desc" }]);
     expect(buildOrderBy("precio-asc")).toEqual([{ priceDop: "asc" }]);
   });
+
+  it("sorts by year and publication date both ways", () => {
+    expect(buildOrderBy("anio-asc")).toEqual([{ year: "asc" }, { createdAt: "desc" }]);
+    expect(buildOrderBy("antiguos")).toEqual([{ createdAt: "asc" }]);
+    expect(parseSearchParams({ orden: "anio-asc" }).orden).toBe("anio-asc");
+    expect(parseSearchParams({ orden: "antiguos" }).orden).toBe("antiguos");
+  });
 });

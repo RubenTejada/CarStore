@@ -4,10 +4,12 @@ import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { deleteVehicle, setVehicleStatus, toggleFeatured } from "@/app/actions/vehicles";
 import { VEHICLE_STATUS_LABEL, formatPrice } from "@/lib/labels";
+import { buildOrderBy, parseSearchParams } from "@/lib/search-params";
 import { VehicleStatus } from "@/generated/prisma/enums";
 import { vehicleTitle, vehicleUrl } from "@/lib/urls";
 import { PageTitle } from "@/components/panel/shell";
 import { VehicleRowActions } from "@/components/panel/vehicle-row-actions";
+import { SortSelect } from "@/components/browse/sort-select";
 import { button, card, input } from "@/components/ui/styles";
 import { cn } from "@/lib/cn";
 
@@ -16,6 +18,7 @@ export default async function AdminVehicles({ searchParams }: PageProps<"/admin/
   const sp = await searchParams;
   const status = Object.values(VehicleStatus).find((s) => s === sp.estado);
   const q = typeof sp.q === "string" ? sp.q.trim().slice(0, 60) : "";
+  const { orden } = parseSearchParams({ orden: sp.orden });
   const vehicles = await db.vehicle.findMany({
     where: {
       status,
@@ -28,7 +31,7 @@ export default async function AdminVehicles({ searchParams }: PageProps<"/admin/
         ],
       }),
     },
-    orderBy: { updatedAt: "desc" },
+    orderBy: buildOrderBy(orden),
     take: 100,
     include: { model: { include: { brand: true } }, dealer: { select: { name: true } }, owner: { select: { name: true } }, photos: { take: 1, orderBy: { position: "asc" } } },
   });
@@ -45,9 +48,13 @@ export default async function AdminVehicles({ searchParams }: PageProps<"/admin/
             </option>
           ))}
         </select>
+        {orden && <input type="hidden" name="orden" value={orden} />}
         <button type="submit" className={button("brand")}>
           Filtrar
         </button>
+        <div className="ml-auto">
+          <SortSelect value={orden ?? "recientes"} />
+        </div>
       </form>
       <ul className={`${card} divide-y divide-line`}>
         {vehicles.map((v) => (

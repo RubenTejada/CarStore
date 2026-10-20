@@ -12,11 +12,16 @@ import type {
   Role,
 } from "@/generated/prisma/enums";
 
-// Tasa fija usada para normalizar precios en USD a DOP (filtros y orden).
+// Tasa de respaldo USD→DOP cuando aún no hay tasa del Banco Central (ver `getUsdRate`).
 export const USD_TO_DOP = 60;
 
-export function toDop(price: number, currency: Currency) {
-  return currency === "USD" ? Math.round(price * USD_TO_DOP) : price;
+export function toDop(price: number, currency: Currency, rate = USD_TO_DOP) {
+  return currency === "USD" ? Math.round(price * rate) : price;
+}
+
+/** Tasa USD→DOP para mostrar: "RD$61.83". */
+export function formatRate(rate: number) {
+  return `RD$${rate.toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 export const BODY_TYPES: { value: BodyType; label: string; plural: string }[] = [

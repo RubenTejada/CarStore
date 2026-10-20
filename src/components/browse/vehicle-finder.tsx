@@ -2,9 +2,8 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { ArrowRight, ChevronLeft, Search, type LucideIcon } from "lucide-react";
+import { ArrowRight, ChevronLeft, type LucideIcon } from "lucide-react";
 import type { BodyType, Fuel, Transmission } from "@/generated/prisma/enums";
 import { BODY_TYPES, FUEL_LABEL, TRANSMISSION_LABEL } from "@/lib/labels";
 import { cn } from "@/lib/cn";
@@ -12,6 +11,7 @@ import { FUEL_ICON, TRANSMISSION_ICON } from "@/lib/spec-icons";
 import type { StockRow } from "@/lib/catalog";
 import { BodySilhouette } from "./body-silhouette";
 import { BodyTypeScene } from "./body-type-scene";
+import { SearchBox } from "./search-box";
 import { BrandLogo, BrandTileBody, brandCell, brandGrid, brandTile, type BrandMark } from "./brand-logo";
 
 type FinderBrand = BrandMark & {
@@ -40,11 +40,9 @@ const FUELS = (Object.keys(FUEL_ICON) as Fuel[]).map((value) => ({ value, icon: 
 const TRANSMISSIONS = (Object.keys(TRANSMISSION_ICON) as Transmission[]).map((value) => ({ value, icon: TRANSMISSION_ICON[value] }));
 
 export function VehicleFinder({ brands }: { brands: FinderBrand[] }) {
-  const router = useRouter();
   const reduce = useReducedMotion();
   const [type, setType] = useState<BodyType | null>(null);
-  const [brand, setBrandState] = useState<FinderBrand | null>(null);
-  const [model, setModel] = useState<string | null>(null);
+  const [brand, setBrand] = useState<FinderBrand | null>(null);
   const [condition, setCondition] = useState<"" | "nuevo" | "usado">("");
   const [driving, setDriving] = useState<BodyType | null>(null);
   const [fuel, setFuel] = useState<Fuel | null>(null);
@@ -60,11 +58,6 @@ export function VehicleFinder({ brands }: { brands: FinderBrand[] }) {
     }, 520);
   };
   const step = brand ? 2 : type ? 1 : 0;
-  // Cambiar de marca descarta el modelo elegido.
-  const setBrand = (b: FinderBrand | null) => {
-    setBrandState(b);
-    setModel(null);
-  };
 
   const filter = useMemo<StockFilter>(
     () => ({ type, condition: condition === "nuevo" ? "NEW" : condition === "usado" ? "USED" : null, fuel, transmission }),
@@ -99,7 +92,7 @@ export function VehicleFinder({ brands }: { brands: FinderBrand[] }) {
   };
   const href = (extra: Record<string, string | undefined>) => `/vehiculos?${params(extra)}`;
   const models = brand ? brand.models.map((m) => ({ ...m, n: count(m.stock, filter) })).filter((m) => m.n > 0) : [];
-  const total = models.reduce((a, m) => (!model || m.slug === model ? a + m.n : a), 0);
+  const total = models.reduce((a, m) => a + m.n, 0);
 
   const typeInfo = BODY_TYPES.find((t) => t.value === type);
   const slide = {
@@ -112,22 +105,12 @@ export function VehicleFinder({ brands }: { brands: FinderBrand[] }) {
   return (
     <div className="text-white">
       <div className="flex flex-wrap items-center gap-3">
-        <form
-          className="relative min-w-0 flex-1 basis-72"
-          onSubmit={(e) => {
-            e.preventDefault();
-            const q = new FormData(e.currentTarget).get("q")?.toString().trim();
-            router.push(href({ q }));
-          }}
-        >
-          <Search className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-white/60" aria-hidden />
-          <input
-            name="q"
-            placeholder="Busca por marca, modelo o año: Corolla 2020"
-            aria-label="Buscar vehículos"
-            className="h-13 w-full rounded-xl border border-white/15 bg-white/10 pr-4 pl-12 text-base text-white placeholder:text-white/55 focus:border-white/50 focus:outline-none"
-          />
-        </form>
+        <SearchBox
+          tone="dark"
+          params={Object.fromEntries(new URLSearchParams(params({})))}
+          placeholder="Marca, modelo, versión o tipo: jeepeta Toyota 2020"
+          className="min-w-0 flex-1 basis-72"
+        />
         <div role="radiogroup" aria-label="Condición" className="flex rounded-xl border border-white/15 bg-white/5 p-1">
           {(
             [
@@ -277,36 +260,28 @@ export function VehicleFinder({ brands }: { brands: FinderBrand[] }) {
 
               <h3 className="mt-5 text-sm font-semibold text-white/70">Modelo</h3>
               <ul className="mt-2 flex flex-wrap gap-2">
-                {models.map((m, i) => {
-                  const on = model === m.slug;
-                  return (
-                    <motion.li
-                      key={m.slug}
-                      initial={reduce ? false : { opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.04 }}
+                {models.map((m, i) => (
+                  <motion.li
+                    key={m.slug}
+                    initial={reduce ? false : { opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.04 }}
+                  >
+                    <Link
+                      href={href({ marca: brand.slug, modelo: m.slug })}
+                      className="flex min-h-11 items-center gap-2.5 rounded-full border border-white/20 bg-white/10 py-2 pr-3 pl-3.5 font-semibold transition-colors hover:border-white/50"
                     >
-                      <button
-                        type="button"
-                        aria-pressed={on}
-                        onClick={() => setModel(on ? null : m.slug)}
-                        className={cn(
-                          "flex min-h-11 items-center gap-2.5 rounded-full border py-2 pr-3 pl-3.5 font-semibold transition-colors",
-                          on ? "border-white bg-white text-night" : "border-white/20 bg-white/10 hover:border-white/50",
-                        )}
-                      >
-                        <BodySilhouette type={m.bodyType} className="h-4 w-10 shrink-0 [--glass:rgba(11,26,54,0.45)] [--rim:#8fa3c4] [--tire:#050b18]" />
-                        {m.name}
-                        <span className={cn("rounded-full px-2 text-xs", on ? "bg-night/10" : "bg-black/25")}>{m.n}</span>
-                      </button>
-                    </motion.li>
-                  );
-                })}
+                      <BodySilhouette type={m.bodyType} className="h-4 w-10 shrink-0 [--glass:rgba(11,26,54,0.45)] [--rim:#8fa3c4] [--tire:#050b18]" />
+                      {m.name}
+                      <span className="rounded-full bg-black/25 px-2 text-xs">{m.n}</span>
+                    </Link>
+                  </motion.li>
+                ))}
               </ul>
 
               <div className="mt-6 flex flex-wrap items-center gap-3">
                 <Link
-                  href={href({ marca: brand.slug, modelo: model ?? undefined })}
+                  href={href({ marca: brand.slug })}
                   className="inline-flex h-12 items-center gap-2 rounded-xl bg-accent px-5 font-semibold text-white transition-colors hover:bg-accent/90"
                 >
                   {total === 1 ? "Ver 1 vehículo" : `Ver ${total} vehículos`}

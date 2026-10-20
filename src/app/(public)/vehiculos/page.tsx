@@ -9,6 +9,7 @@ import { BODY_TYPE_LABEL, CONDITION_LABEL, DRIVETRAIN_LABEL, FUEL_LABEL, TRANSMI
 import { PROVINCE_NAMES } from "@/lib/provinces";
 import { vehicleTitle, vehicleUrl } from "@/lib/urls";
 import { FilterPanel } from "@/components/browse/filter-panel";
+import { SearchBox } from "@/components/browse/search-box";
 import { SortSelect } from "@/components/browse/sort-select";
 import { VehicleCard } from "@/components/vehicle/vehicle-card";
 import { MapView } from "@/components/map/map-view";
@@ -77,6 +78,8 @@ export default async function VehiclesPage({ searchParams }: PageProps<"/vehicul
           </nav>
         </div>
       </div>
+
+      <SearchBox key={qs} params={values} defaultValue={f.q} className="mt-5 max-w-2xl" />
 
       {chips.length > 0 && (
         <ul className="mt-5 flex flex-wrap gap-2" aria-label="Filtros activos">
@@ -175,7 +178,7 @@ function Filters({
 }) {
   return (
     <FilterPanel
-      key={qs}
+      resetKey={qs}
       values={values}
       selectedFeatures={f.car ?? []}
       brands={brands
@@ -190,6 +193,8 @@ function Filters({
         .filter((b) => b.count > 0 || b.slug === f.marca)}
       trims={trims}
       typeCounts={facets.types}
+      prices={facets.prices}
+      years={facets.years}
       features={features}
       provinces={PROVINCE_NAMES}
     />

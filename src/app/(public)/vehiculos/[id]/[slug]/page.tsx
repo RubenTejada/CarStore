@@ -24,6 +24,7 @@ import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { canEditVehicle } from "@/lib/listing-rules";
 import { vehicleCardSelect } from "@/lib/search";
+import { getUsdRate } from "@/lib/exchange-rate";
 import {
   BODY_TYPE_LABEL,
   CONDITION_LABEL,
@@ -34,6 +35,8 @@ import {
   VEHICLE_STATUS_LABEL,
   formatKm,
   formatPrice,
+  formatRate,
+  toDop,
 } from "@/lib/labels";
 import { directionsUrls, googleMapsUrl, vehicleTitle, vehicleUrl, whatsappUrl } from "@/lib/urls";
 import { FeatureIcon } from "@/lib/feature-icons";
@@ -42,6 +45,7 @@ import { VehicleCard } from "@/components/vehicle/vehicle-card";
 import { MapView } from "@/components/map/map-view";
 import { DealerBadge } from "@/components/dealer/dealer-badge";
 import { BodySilhouette } from "@/components/browse/body-silhouette";
+import { CompareToggle } from "@/components/compare/compare-toggle";
 import { button } from "@/components/ui/styles";
 import { cn } from "@/lib/cn";
 import type { FeatureCategory } from "@/generated/prisma/enums";
@@ -69,7 +73,7 @@ export default async function VehiclePage({ params }: PageProps<"/vehiculos/[id]
   const { id, slug } = await params;
   const v = await getVehicle(id);
   if (!v) notFound();
-  const user = await getCurrentUser();
+  const [user, usd] = await Promise.all([getCurrentUser(), getUsdRate()]);
   const isOwner = !!user && canEditVehicle(user, v);
   if (v.status !== "ACTIVE" && !isOwner) notFound();
   const canonical = vehicleUrl(v);
@@ -166,7 +170,11 @@ export default async function VehiclePage({ params }: PageProps<"/vehiculos/[id]
             {v.trim && <span className="block text-xl font-semibold text-muted">{v.trim}</span>}
           </h1>
           <p className="mt-4 text-4xl font-extrabold tracking-tight text-brand">{formatPrice(v.price, v.currency)}</p>
-          {v.currency === "USD" && <p className="text-sm text-muted">Aprox. {formatPrice(v.priceDop, "DOP")}</p>}
+          {v.currency === "USD" && (
+            <p className="text-sm text-muted">
+              Aprox. {formatPrice(toDop(v.price, v.currency, usd.rate), "DOP")} a {formatRate(usd.rate)} por dólar{usd.publishedOn && " (tasa del Banco Central)"}
+            </p>
+          )}
 
           <dl className="mt-5 grid grid-cols-3 divide-x divide-line rounded-xl border border-line bg-surface text-center">
             {[
@@ -194,6 +202,7 @@ export default async function VehiclePage({ params }: PageProps<"/vehiculos/[id]
                 Llamar al {callPhone}
               </a>
             )}
+            <CompareToggle variant="button" item={{ id: v.id, title, year: v.year, photo: v.photos[0]?.url }} />
           </div>
 
           <div className="mt-5 rounded-xl border border-line bg-surface p-4">

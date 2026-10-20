@@ -23,10 +23,12 @@ const slug = z
 const text = z.string().trim().max(80).optional().catch(undefined);
 
 export const SORTS = {
-  recientes: "Más recientes",
+  recientes: "Publicación: más recientes",
+  antiguos: "Publicación: más antiguos",
   "precio-asc": "Precio: menor a mayor",
   "precio-desc": "Precio: mayor a menor",
   "anio-desc": "Año: más nuevo",
+  "anio-asc": "Año: más antiguo",
   "km-asc": "Menor kilometraje",
 } as const;
 export type Sort = keyof typeof SORTS;
@@ -96,7 +98,7 @@ export function toQueryString(filters: SearchFilters, overrides: Partial<Record<
   return qs ? `?${qs}` : "";
 }
 
-type Dimension = "tipo" | "marca" | "version";
+type Dimension = "tipo" | "marca" | "version" | "precio" | "anio";
 
 /** Construye el `where` de Prisma. `omit` excluye una dimensión (para conteos por faceta). */
 export function buildWhere(f: SearchFilters, omit?: Dimension): Prisma.VehicleWhereInput {
@@ -112,10 +114,10 @@ export function buildWhere(f: SearchFilters, omit?: Dimension): Prisma.VehicleWh
       if (f.version && omit !== "version") and.push({ catalogTrim: { slug: f.version } });
     }
   }
-  if (f.anioMin) and.push({ year: { gte: f.anioMin } });
-  if (f.anioMax) and.push({ year: { lte: f.anioMax } });
-  if (f.precioMin) and.push({ priceDop: { gte: f.precioMin } });
-  if (f.precioMax) and.push({ priceDop: { lte: f.precioMax } });
+  if (f.anioMin && omit !== "anio") and.push({ year: { gte: f.anioMin } });
+  if (f.anioMax && omit !== "anio") and.push({ year: { lte: f.anioMax } });
+  if (f.precioMin && omit !== "precio") and.push({ priceDop: { gte: f.precioMin } });
+  if (f.precioMax && omit !== "precio") and.push({ priceDop: { lte: f.precioMax } });
   if (f.kmMax !== undefined) and.push({ mileageKm: { lte: f.kmMax } });
   if (f.transmision) and.push({ transmission: f.transmision });
   if (f.combustible) and.push({ fuel: f.combustible });
@@ -147,6 +149,10 @@ export function buildOrderBy(sort: Sort | undefined): Prisma.VehicleOrderByWithR
       return [{ priceDop: "desc" }];
     case "anio-desc":
       return [{ year: "desc" }, { createdAt: "desc" }];
+    case "anio-asc":
+      return [{ year: "asc" }, { createdAt: "desc" }];
+    case "antiguos":
+      return [{ createdAt: "asc" }];
     case "km-asc":
       return [{ mileageKm: "asc" }];
     default:

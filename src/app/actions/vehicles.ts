@@ -9,6 +9,7 @@ import { requireUser, type CurrentUser } from "@/lib/auth";
 import { canEditVehicle, evaluatePublish, getActiveSubscription, getQuota } from "@/lib/listing-rules";
 import { PROVINCE_NAMES } from "@/lib/provinces";
 import { slugify, toDop } from "@/lib/labels";
+import { getUsdRate } from "@/lib/exchange-rate";
 import { BodyType, Condition, Currency, Drivetrain, Fuel, Transmission, VehicleStatus } from "@/generated/prisma/enums";
 import type { FormState } from "./auth";
 
@@ -108,7 +109,7 @@ export async function saveVehicle(id: string | null, _: FormState, form: FormDat
     featuredUntil = existing?.featuredUntil ?? new Date(Date.now() + 30 * 86_400_000);
   }
 
-  const features = await db.feature.findMany({ where: { slug: { in: d.features } }, select: { id: true } });
+  const [features, usd] = await Promise.all([db.feature.findMany({ where: { slug: { in: d.features } }, select: { id: true } }), getUsdRate()]);
   const data = {
     modelId: d.modelId,
     bodyType: d.bodyType,
@@ -118,7 +119,7 @@ export async function saveVehicle(id: string | null, _: FormState, form: FormDat
     condition: d.condition,
     price: d.price,
     currency: d.currency,
-    priceDop: toDop(d.price, d.currency),
+    priceDop: toDop(d.price, d.currency, usd.rate),
     mileageKm: d.condition === "NEW" ? Math.min(d.mileageKm, 500) : d.mileageKm,
     transmission: d.transmission,
     fuel: d.fuel,

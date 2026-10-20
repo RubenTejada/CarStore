@@ -6,10 +6,29 @@ import { AnimatePresence, motion } from "motion/react";
 import { ChevronLeft, ChevronRight, Expand, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 
-/** Galería con miniaturas, gesto de deslizar y visor a pantalla completa. */
-export function Gallery({ photos, alt }: { photos: string[]; alt: string }) {
+/**
+ * Galería con miniaturas, gesto de deslizar y visor a pantalla completa.
+ * `compact` quita las miniaturas (columnas del comparador); `autoplay` rota las fotos cada N ms
+ * mientras nadie la está usando. `children` se pinta encima de la foto (placas, botones).
+ */
+export function Gallery({
+  photos,
+  alt,
+  compact = false,
+  autoplay,
+  sizes = "(min-width: 1024px) 60vw, 100vw",
+  children,
+}: {
+  photos: string[];
+  alt: string;
+  compact?: boolean;
+  autoplay?: number;
+  sizes?: string;
+  children?: React.ReactNode;
+}) {
   const [index, setIndex] = useState(0);
   const [open, setOpen] = useState(false);
+  const [paused, setPaused] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const touchX = useRef<number | null>(null);
   const n = photos.length;
@@ -22,6 +41,13 @@ export function Gallery({ photos, alt }: { photos: string[]; alt: string }) {
     if (!open && dialog.open) dialog.close();
   }, [open]);
 
+  // Se reprograma en cada cambio de foto, así avanzar a mano reinicia la cuenta.
+  useEffect(() => {
+    if (!autoplay || n < 2 || paused || open || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const t = setTimeout(() => go(1), autoplay);
+    return () => clearTimeout(t);
+  }, [autoplay, n, paused, open, index, go]);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -32,7 +58,14 @@ export function Gallery({ photos, alt }: { photos: string[]; alt: string }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [open, go]);
 
-  if (!n) return <div className="grid aspect-[3/2] place-items-center rounded-xl bg-surface-2 text-muted">Sin fotos</div>;
+  const radius = compact ? "rounded-lg" : "rounded-xl";
+  if (!n)
+    return (
+      <div className={cn("relative grid aspect-[3/2] place-items-center bg-surface-2 text-muted", radius)}>
+        Sin fotos
+        {children}
+      </div>
+    );
 
   const swipe = {
     onTouchStart: (e: React.TouchEvent) => (touchX.current = e.touches[0].clientX),
@@ -46,26 +79,39 @@ export function Gallery({ photos, alt }: { photos: string[]; alt: string }) {
 
   return (
     <div>
-      <div className="group relative aspect-[3/2] overflow-hidden rounded-xl bg-night" {...swipe}>
+      <div
+        className={cn("group relative aspect-[3/2] overflow-hidden bg-night", radius)}
+        onMouseEnter={() => setPaused(true)}
+        onMouseLeave={() => setPaused(false)}
+        onFocus={() => setPaused(true)}
+        onBlur={() => setPaused(false)}
+        {...swipe}
+      >
         <AnimatePresence initial={false} mode="popLayout">
           <motion.div key={index} className="absolute inset-0" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }}>
-            <Image src={photos[index]} alt={`${alt}, foto ${index + 1} de ${n}`} fill priority={index === 0} sizes="(min-width: 1024px) 60vw, 100vw" className="object-cover" />
+            <Image src={photos[index]} alt={`${alt}, foto ${index + 1} de ${n}`} fill priority={index === 0} sizes={sizes} className="object-cover" />
           </motion.div>
         </AnimatePresence>
         <button type="button" onClick={() => setOpen(true)} className="absolute inset-0 cursor-zoom-in" aria-label="Ver fotos en pantalla completa" />
         {n > 1 && (
           <>
-            <NavButton side="left" onClick={() => go(-1)} />
-            <NavButton side="right" onClick={() => go(1)} />
+            <NavButton side="left" onClick={() => go(-1)} small={compact} />
+            <NavButton side="right" onClick={() => go(1)} small={compact} />
           </>
         )}
-        <span className="pointer-events-none absolute right-3 bottom-3 flex items-center gap-1.5 rounded-md bg-black/60 px-2.5 py-1 text-sm font-semibold text-white">
-          <Expand className="size-3.5" aria-hidden />
+        <span
+          className={cn(
+            "pointer-events-none absolute flex items-center gap-1.5 rounded-md bg-black/60 font-semibold text-white",
+            compact ? "right-2 bottom-2 px-2 py-0.5 text-xs" : "right-3 bottom-3 px-2.5 py-1 text-sm",
+          )}
+        >
+          <Expand className={compact ? "size-3" : "size-3.5"} aria-hidden />
           {index + 1} / {n}
         </span>
+        {children}
       </div>
 
-      {n > 1 && (
+      {n > 1 && !compact && (
         <ul className="scrollbar-none mt-3 flex gap-2 overflow-x-auto" aria-label="Miniaturas">
           {photos.map((p, i) => (
             <li key={p + i} className="shrink-0">
@@ -116,7 +162,7 @@ export function Gallery({ photos, alt }: { photos: string[]; alt: string }) {
   );
 }
 
-function NavButton({ side, onClick, always }: { side: "left" | "right"; onClick: () => void; always?: boolean }) {
+function NavButton({ side, onClick, always, small }: { side: "left" | "right"; onClick: () => void; always?: boolean; small?: boolean }) {
   const Icon = side === "left" ? ChevronLeft : ChevronRight;
   return (
     <button
@@ -124,12 +170,13 @@ function NavButton({ side, onClick, always }: { side: "left" | "right"; onClick:
       onClick={onClick}
       aria-label={side === "left" ? "Foto anterior" : "Foto siguiente"}
       className={cn(
-        "absolute top-1/2 z-10 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-night shadow-lg transition-opacity hover:bg-white",
-        side === "left" ? "left-3" : "right-3",
+        "absolute top-1/2 z-10 grid -translate-y-1/2 place-items-center rounded-full bg-white/90 text-night shadow-lg transition-opacity hover:bg-white",
+        small ? "size-8" : "size-11",
+        side === "left" ? (small ? "left-2" : "left-3") : small ? "right-2" : "right-3",
         !always && "opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100",
       )}
     >
-      <Icon className="size-5" aria-hidden />
+      <Icon className={small ? "size-4" : "size-5"} aria-hidden />
     </button>
   );
 }

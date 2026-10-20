@@ -112,6 +112,54 @@ body {
 }
 
 /*
+ * Rango doble (ver range-histogram.tsx): dos <input type="range"> superpuestos
+ * con pista transparente; solo las manijas reciben el puntero. Manija de 20px:
+ * las barras y el tramo activo usan ese mismo margen.
+ */
+.dual-range {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  margin: 0;
+  appearance: none;
+  background: none;
+  pointer-events: none;
+}
+.dual-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 9999px;
+  background: var(--surface);
+  border: 3px solid var(--brand);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.25);
+  cursor: grab;
+  pointer-events: auto;
+}
+.dual-range::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  background: var(--surface);
+  border: 3px solid var(--brand);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.25);
+  cursor: grab;
+  pointer-events: auto;
+}
+.dual-range:active::-webkit-slider-thumb {
+  cursor: grabbing;
+}
+.dual-range:focus-visible {
+  outline: none;
+}
+.dual-range:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+.dual-range:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+/*
  * Escenarios del selector de tipo (ver body-type-scene.tsx). En reposo el fondo está vacío;
  * al pasar el mouse (o al seleccionar) aparecen las capas fijas (`.scene-layer`, que animan su
  * `--anim` y, al seleccionar, `--anim-drive`) y entran desde la derecha elementos sueltos

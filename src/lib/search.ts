@@ -4,6 +4,8 @@ import type { Prisma } from "@/generated/prisma/client";
 import type { BodyType } from "@/generated/prisma/enums";
 import { buildOrderBy, buildWhere, type SearchFilters } from "@/lib/search-params";
 import { sweepExpiredSubscriptions } from "@/lib/listing-rules";
+import { getUsdRate } from "@/lib/exchange-rate";
+import { priceHistogram, yearHistogram } from "@/lib/histogram";
 
 export const PAGE_SIZE = 18;
 
@@ -31,7 +33,8 @@ export const vehicleCardSelect = {
 export type VehicleCard = Prisma.VehicleGetPayload<{ select: typeof vehicleCardSelect }>;
 
 export async function searchVehicles(filters: SearchFilters) {
-  await sweepExpiredSubscriptions();
+  // `getUsdRate` programa el refresco diario de la tasa, que recalcula `priceDop` sin hacer esperar.
+  await Promise.all([sweepExpiredSubscriptions(), getUsdRate()]);
   const where = buildWhere(filters);
   const page = filters.pagina ?? 1;
   const [items, total] = await Promise.all([
@@ -49,6 +52,7 @@ export async function searchVehicles(filters: SearchFilters) {
 
 /** Marcadores para el mapa (todos los resultados, hasta un límite). */
 export async function searchMapPoints(filters: SearchFilters, limit = 600) {
+  await getUsdRate();
   return db.vehicle.findMany({
     where: buildWhere(filters),
     select: vehicleCardSelect,
@@ -57,14 +61,19 @@ export async function searchMapPoints(filters: SearchFilters, limit = 600) {
   });
 }
 
-/** Conteos por tipo de carrocería, por marca y (con un modelo elegido) por versión, respetando los demás filtros. */
+/**
+ * Conteos por tipo de carrocería, por marca y (con un modelo elegido) por versión,
+ * más los histogramas de precio y año, respetando los demás filtros.
+ */
 export async function getFacets(filters: SearchFilters) {
-  const [byType, byModel, byTrim] = await Promise.all([
+  const [byType, byModel, byTrim, byPrice, byYear] = await Promise.all([
     db.vehicle.groupBy({ by: ["bodyType"], where: buildWhere(filters, "tipo"), _count: true }),
     db.vehicle.groupBy({ by: ["modelId"], where: buildWhere(filters, "marca"), _count: true }),
     filters.marca && filters.modelo
       ? db.vehicle.groupBy({ by: ["trimId"], where: { AND: [buildWhere(filters, "version"), { trimId: { not: null } }] }, _count: true })
       : [],
+    db.vehicle.groupBy({ by: ["priceDop"], where: buildWhere(filters, "precio"), _count: true }),
+    db.vehicle.groupBy({ by: ["year"], where: buildWhere(filters, "anio"), _count: true }),
   ]);
   const models = await db.model.findMany({
     where: { id: { in: byModel.map((m) => m.modelId) } },
@@ -80,7 +89,9 @@ export async function getFacets(filters: SearchFilters) {
     Record<BodyType, number>
   >;
   const trims = Object.fromEntries(byTrim.map((t) => [t.trimId!, t._count]));
-  return { types, brands, trims };
+  const prices = priceHistogram(byPrice.map((p) => ({ value: p.priceDop, count: p._count })));
+  const years = yearHistogram(byYear.map((y) => ({ value: y.year, count: y._count })));
+  return { types, brands, trims, prices, years };
 }
 
 export async function getFeaturedVehicles(limit = 8) {

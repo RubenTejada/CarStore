@@ -4,11 +4,13 @@ import { Eye, Pencil, Star } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { accountScope } from "@/lib/listing-rules";
+import { buildOrderBy, parseSearchParams } from "@/lib/search-params";
 import { VEHICLE_STATUS_LABEL, formatPrice } from "@/lib/labels";
 import { vehicleTitle, vehicleUrl } from "@/lib/urls";
 import { deleteVehicle, setVehicleStatus, toggleFeatured } from "@/app/actions/vehicles";
 import { PageTitle } from "@/components/panel/shell";
 import { VehicleRowActions } from "@/components/panel/vehicle-row-actions";
+import { SortSelect } from "@/components/browse/sort-select";
 import { button, card } from "@/components/ui/styles";
 import { cn } from "@/lib/cn";
 
@@ -21,10 +23,12 @@ const STATUS_STYLE = {
 
 export default async function MyVehicles({ searchParams }: PageProps<"/panel/vehiculos">) {
   const user = await requireUser("DEALER", "SELLER");
-  const { ok } = await searchParams;
+  const sp = await searchParams;
+  const { ok } = sp;
+  const { orden } = parseSearchParams(sp);
   const vehicles = await db.vehicle.findMany({
     where: accountScope(user),
-    orderBy: { updatedAt: "desc" },
+    orderBy: buildOrderBy(orden),
     include: { model: { include: { brand: true } }, photos: { take: 1, orderBy: { position: "asc" } } },
   });
 
@@ -53,56 +57,61 @@ export default async function MyVehicles({ searchParams }: PageProps<"/panel/veh
           </Link>
         </div>
       ) : (
-        <ul className={`${card} divide-y divide-line`}>
-          {vehicles.map((v) => {
-            const featured = !!v.featuredUntil && v.featuredUntil > new Date();
-            return (
-              <li key={v.id} className="flex flex-wrap items-center gap-4 p-4">
-                <div className="relative h-16 w-24 shrink-0 overflow-hidden rounded-lg bg-surface-2">
-                  {v.photos[0] && <Image src={v.photos[0].url} alt="" fill sizes="96px" className="object-cover" />}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-bold">
-                    {vehicleTitle(v)} {v.year} {v.trim && <span className="font-normal text-muted">{v.trim}</span>}
-                  </p>
-                  <p className="text-sm text-muted">
-                    {formatPrice(v.price, v.currency)}
-                    <span className="mx-2">|</span>
-                    <Eye className="inline size-3.5" aria-hidden /> {v.views}
-                  </p>
-                </div>
-                <span className={cn("rounded-full px-3 py-1 text-xs font-bold", STATUS_STYLE[v.status])}>{VEHICLE_STATUS_LABEL[v.status]}</span>
-                {featured && (
-                  <span className="flex items-center gap-1 rounded-full bg-sun px-3 py-1 text-xs font-bold text-night">
-                    <Star className="size-3 fill-current" aria-hidden /> Destacado
-                  </span>
-                )}
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <Link href={`/panel/vehiculos/${v.id}`} className={button("outline", "sm")}>
-                    <Pencil className="size-3.5" aria-hidden />
-                    Editar
-                  </Link>
-                  {v.status === "ACTIVE" && (
-                    <Link href={vehicleUrl(v)} className={button("ghost", "sm")}>
-                      Ver
-                    </Link>
+        <>
+          <div className="mb-3 flex justify-end">
+            <SortSelect value={orden ?? "recientes"} />
+          </div>
+          <ul className={`${card} divide-y divide-line`}>
+            {vehicles.map((v) => {
+              const featured = !!v.featuredUntil && v.featuredUntil > new Date();
+              return (
+                <li key={v.id} className="flex flex-wrap items-center gap-4 p-4">
+                  <div className="relative h-16 w-24 shrink-0 overflow-hidden rounded-lg bg-surface-2">
+                    {v.photos[0] && <Image src={v.photos[0].url} alt="" fill sizes="96px" className="object-cover" />}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold">
+                      {vehicleTitle(v)} {v.year} {v.trim && <span className="font-normal text-muted">{v.trim}</span>}
+                    </p>
+                    <p className="text-sm text-muted">
+                      {formatPrice(v.price, v.currency)}
+                      <span className="mx-2">|</span>
+                      <Eye className="inline size-3.5" aria-hidden /> {v.views}
+                    </p>
+                  </div>
+                  <span className={cn("rounded-full px-3 py-1 text-xs font-bold", STATUS_STYLE[v.status])}>{VEHICLE_STATUS_LABEL[v.status]}</span>
+                  {featured && (
+                    <span className="flex items-center gap-1 rounded-full bg-sun px-3 py-1 text-xs font-bold text-night">
+                      <Star className="size-3 fill-current" aria-hidden /> Destacado
+                    </span>
                   )}
-                  <VehicleRowActions
-                    status={v.status}
-                    featured={featured}
-                    actions={{
-                      publish: setVehicleStatus.bind(null, v.id, "ACTIVE"),
-                      pause: setVehicleStatus.bind(null, v.id, "PAUSED"),
-                      sold: setVehicleStatus.bind(null, v.id, "SOLD"),
-                      feature: toggleFeatured.bind(null, v.id),
-                      remove: deleteVehicle.bind(null, v.id),
-                    }}
-                  />
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Link href={`/panel/vehiculos/${v.id}`} className={button("outline", "sm")}>
+                      <Pencil className="size-3.5" aria-hidden />
+                      Editar
+                    </Link>
+                    {v.status === "ACTIVE" && (
+                      <Link href={vehicleUrl(v)} className={button("ghost", "sm")}>
+                        Ver
+                      </Link>
+                    )}
+                    <VehicleRowActions
+                      status={v.status}
+                      featured={featured}
+                      actions={{
+                        publish: setVehicleStatus.bind(null, v.id, "ACTIVE"),
+                        pause: setVehicleStatus.bind(null, v.id, "PAUSED"),
+                        sold: setVehicleStatus.bind(null, v.id, "SOLD"),
+                        feature: toggleFeatured.bind(null, v.id),
+                        remove: deleteVehicle.bind(null, v.id),
+                      }}
+                    />
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </>
       )}
     </>
   );

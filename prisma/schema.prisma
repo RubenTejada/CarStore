@@ -287,3 +287,13 @@ model Subscription {
   @@index([dealerId, status])
   @@index([userId, status])
 }
+
+// Tasa de referencia USD→DOP (venta) del Banco Central, consultada una vez por día.
+// `day` es el día en Santo Domingo en que se consultó; `publishedOn`, la fecha de la tasa
+// según el Banco Central (los fines de semana y feriados es la del último día laborable).
+model ExchangeRate {
+  day         DateTime @id @db.Date
+  usdDop      Float
+  publishedOn DateTime @db.Date
+  createdAt   DateTime @default(now())
+}

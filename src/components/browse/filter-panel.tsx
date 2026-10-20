@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { ChevronDown, LayoutGrid, type LucideIcon } from "lucide-react";
+import { ChevronDown, LayoutGrid, Search, type LucideIcon } from "lucide-react";
 import type { BodyType, FeatureCategory } from "@/generated/prisma/enums";
 import {
   BODY_TYPES,
@@ -12,13 +12,16 @@ import {
   FEATURE_CATEGORY_LABEL,
   FUEL_LABEL,
   TRANSMISSION_LABEL,
+  formatPrice,
 } from "@/lib/labels";
+import type { Histogram } from "@/lib/histogram";
 import { cn } from "@/lib/cn";
 import { input, label } from "@/components/ui/styles";
 import { FUEL_ICON, TRANSMISSION_ICON } from "@/lib/spec-icons";
 import { FeatureIcon } from "@/lib/feature-icons";
 import { BodySilhouette } from "./body-silhouette";
 import { BrandLogo, type BrandMark } from "./brand-logo";
+import { RangeHistogram } from "./range-histogram";
 
 type Props = {
   values: Record<string, string>;
@@ -27,11 +30,12 @@ type Props = {
   /** Versiones del modelo elegido (vacío sin modelo). */
   trims: { slug: string; name: string; count: number }[];
   typeCounts: Partial<Record<BodyType, number>>;
+  prices: Histogram | null;
+  years: Histogram | null;
   features: { slug: string; name: string; category: FeatureCategory; icon: string }[];
   provinces: string[];
 };
 
-const YEARS = Array.from({ length: 30 }, (_, i) => new Date().getFullYear() + 1 - i);
 const KMS = [10_000, 30_000, 50_000, 80_000, 120_000, 160_000];
 /** Marcas visibles antes de "Más marcas" (la elegida siempre se ve). */
 const TOP_BRANDS = 8;
@@ -39,8 +43,29 @@ const TOP_BRANDS = 8;
 /**
  * Panel de filtros. Es un <form method="get"> normal (funciona sin JS);
  * con JS navega en cada cambio sin recargar.
+ *
+ * El form se remonta cuando cambia `resetKey` (la URL) para que sus campos no
+ * controlados reflejen los filtros actuales; el texto del buscador de
+ * características vive aquí afuera para no perderse en cada cambio.
  */
-export function FilterPanel({ values, selectedFeatures, brands, trims, typeCounts, features, provinces }: Props) {
+export function FilterPanel({ resetKey, ...props }: Props & { resetKey: string }) {
+  const [featureQuery, setFeatureQuery] = useState("");
+  return <FilterForm key={resetKey} {...props} featureQuery={featureQuery} onFeatureQuery={setFeatureQuery} />;
+}
+
+function FilterForm({
+  values,
+  selectedFeatures,
+  brands,
+  trims,
+  typeCounts,
+  prices,
+  years,
+  features,
+  provinces,
+  featureQuery,
+  onFeatureQuery,
+}: Props & { featureQuery: string; onFeatureQuery: (q: string) => void }) {
   const router = useRouter();
   const pathname = usePathname();
   const formRef = useRef<HTMLFormElement>(null);
@@ -85,20 +110,15 @@ export function FilterPanel({ values, selectedFeatures, brands, trims, typeCount
     </div>
   );
 
-  const byCategory = Object.entries(FEATURE_CATEGORY_LABEL).map(([cat, name]) => ({
-    name,
-    items: features.filter((f) => f.category === cat),
-  }));
-
   return (
     <form
       ref={formRef}
       method="get"
       action={pathname}
       onChange={(e) => {
-        // Los campos numéricos se aplican al salir del campo o con Enter.
+        // La búsqueda se aplica con Enter; los rangos, al soltar la manija.
         const type = (e.target as unknown as HTMLInputElement).type;
-        if (type === "number" || type === "search") return;
+        if (type === "search" || type === "range") return;
         apply();
       }}
       onSubmit={(e) => {
@@ -108,12 +128,8 @@ export function FilterPanel({ values, selectedFeatures, brands, trims, typeCount
       className={cn("space-y-6 transition-opacity", pending && "opacity-60")}
       aria-busy={pending}
     >
-      <div>
-        <label htmlFor="f-q" className={label}>
-          Palabra clave
-        </label>
-        <input id="f-q" name="q" type="search" defaultValue={values.q} placeholder="Ej. Corolla, Limited, 2021" className={input} />
-      </div>
+      {/* El texto libre se escribe en el buscador de arriba; aquí solo se conserva al cambiar filtros. */}
+      {values.q && <input type="hidden" name="q" value={values.q} />}
 
       <fieldset>
         <legend className={label}>Condición</legend>
@@ -195,19 +211,27 @@ export function FilterPanel({ values, selectedFeatures, brands, trims, typeCount
         )}
       </div>
 
-      <fieldset>
-        <legend className={label}>Precio (RD$)</legend>
-        <div className="grid grid-cols-2 gap-2">
-          <input name="precioMin" type="number" min={0} step={50000} inputMode="numeric" placeholder="Mínimo" aria-label="Precio mínimo" defaultValue={values.precioMin} onBlur={apply} className={input} />
-          <input name="precioMax" type="number" min={0} step={50000} inputMode="numeric" placeholder="Máximo" aria-label="Precio máximo" defaultValue={values.precioMax} onBlur={apply} className={input} />
-        </div>
+      <div>
+        <RangeHistogram
+          legend="Precio (RD$)"
+          names={["precioMin", "precioMax"]}
+          histogram={prices}
+          value={[values.precioMin, values.precioMax]}
+          format={(n) => formatPrice(n, "DOP")}
+          onCommit={apply}
+        />
         <p className="mt-1 text-xs text-muted">Precios en US$ se convierten a RD$ para comparar.</p>
-      </fieldset>
-
-      <div className="grid grid-cols-2 gap-2">
-        {select("anioMin", "Año desde", YEARS.map((y) => [String(y), String(y)]), "Cualquiera")}
-        {select("anioMax", "Año hasta", YEARS.map((y) => [String(y), String(y)]), "Cualquiera")}
       </div>
+
+      <RangeHistogram
+        legend="Año"
+        names={["anioMin", "anioMax"]}
+        histogram={years}
+        value={[values.anioMin, values.anioMax]}
+        discrete
+        format={String}
+        onCommit={apply}
+      />
 
       <ChoiceChips
         name="kmMax"
@@ -239,34 +263,7 @@ export function FilterPanel({ values, selectedFeatures, brands, trims, typeCount
       <ColorSwatches value={values.color} />
       {select("provincia", "Provincia", provinces.map((p) => [p, p]), "Todo el país")}
 
-      <fieldset>
-        <legend className={label}>Características</legend>
-        <div className="space-y-2">
-          {byCategory.map((cat) => {
-            const checked = cat.items.filter((f) => selectedFeatures.includes(f.slug)).length;
-            return (
-              <details key={cat.name} open={checked > 0} className="group rounded-lg border border-line bg-surface">
-                <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2.5 text-sm font-semibold [&::-webkit-details-marker]:hidden">
-                  {cat.name}
-                  <span className="flex items-center gap-2 text-muted">
-                    {checked > 0 && <span className="rounded-full bg-brand px-2 text-xs text-brand-ink">{checked}</span>}
-                    <ChevronDown className="size-4 transition-transform group-open:rotate-180" aria-hidden />
-                  </span>
-                </summary>
-                <div className="space-y-1 border-t border-line px-3 py-2">
-                  {cat.items.map((f) => (
-                    <label key={f.slug} className="flex cursor-pointer items-center gap-2.5 py-1 text-sm">
-                      <input type="checkbox" name="car" value={f.slug} defaultChecked={selectedFeatures.includes(f.slug)} className="size-4 accent-[var(--brand)]" />
-                      <FeatureIcon icon={f.icon} className="size-4 shrink-0 text-muted" />
-                      {f.name}
-                    </label>
-                  ))}
-                </div>
-              </details>
-            );
-          })}
-        </div>
-      </fieldset>
+      <FeatureFilter features={features} selected={selectedFeatures} query={featureQuery} onQuery={onFeatureQuery} />
 
       <noscript>
         <button type="submit" className="w-full rounded-lg bg-brand py-3 font-semibold text-brand-ink">
@@ -274,6 +271,80 @@ export function FilterPanel({ values, selectedFeatures, brands, trims, typeCount
         </button>
       </noscript>
     </form>
+  );
+}
+
+/** Minúsculas y sin tildes, para buscar "climatizacion" y encontrar "Climatización". */
+const normalize = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+
+/**
+ * Características agrupadas por categoría, con un buscador que filtra la lista.
+ * Las que no coinciden solo se ocultan: siguen en el form y conservan su estado.
+ */
+function FeatureFilter({
+  features,
+  selected,
+  query,
+  onQuery,
+}: {
+  features: Props["features"];
+  selected: string[];
+  query: string;
+  onQuery: (q: string) => void;
+}) {
+  const q = normalize(query.trim());
+  const matches = (f: { name: string }) => !q || normalize(f.name).includes(q);
+
+  const byCategory = Object.entries(FEATURE_CATEGORY_LABEL).map(([cat, name]) => ({
+    name,
+    items: features.filter((f) => f.category === cat),
+  }));
+  const noResults = q !== "" && !features.some(matches);
+
+  return (
+    <fieldset>
+      <legend className={label}>Características</legend>
+      <div className="relative mb-2">
+        <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted" aria-hidden />
+        {/* Sin name: no viaja en la URL, solo filtra la lista. */}
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => onQuery(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && e.preventDefault()}
+          placeholder="Buscar característica"
+          aria-label="Buscar característica"
+          className={cn(input, "pl-9")}
+        />
+      </div>
+      <div className="space-y-2">
+        {byCategory.map((cat) => {
+          const checked = cat.items.filter((f) => selected.includes(f.slug)).length;
+          const visible = cat.items.filter(matches).length;
+          return (
+            <details key={cat.name} open={q ? visible > 0 : checked > 0} hidden={visible === 0} className="group rounded-lg border border-line bg-surface">
+              <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2.5 text-sm font-semibold [&::-webkit-details-marker]:hidden">
+                {cat.name}
+                <span className="flex items-center gap-2 text-muted">
+                  {checked > 0 && <span className="rounded-full bg-brand px-2 text-xs text-brand-ink">{checked}</span>}
+                  <ChevronDown className="size-4 transition-transform group-open:rotate-180" aria-hidden />
+                </span>
+              </summary>
+              <div className="space-y-1 border-t border-line px-3 py-2">
+                {cat.items.map((f) => (
+                  <label key={f.slug} hidden={!matches(f)} className="flex cursor-pointer items-center gap-2.5 py-1 text-sm">
+                    <input type="checkbox" name="car" value={f.slug} defaultChecked={selected.includes(f.slug)} className="size-4 accent-[var(--brand)]" />
+                    <FeatureIcon icon={f.icon} className="size-4 shrink-0 text-muted" />
+                    {f.name}
+                  </label>
+                ))}
+              </div>
+            </details>
+          );
+        })}
+        {noResults && <p className="py-2 text-sm text-muted">Ninguna característica coincide con “{query.trim()}”.</p>}
+      </div>
+    </fieldset>
   );
 }
 
