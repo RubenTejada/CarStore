@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { LayoutGrid, Map as MapIcon, SlidersHorizontal, X } from "lucide-react";
 import { db } from "@/lib/db";
+import { getBrowseCatalog, type BrowseBrand } from "@/lib/catalog";
 import { getFacets, searchMapPoints, searchVehicles } from "@/lib/search";
 import { parseSearchParams, toQueryString, type SearchFilters } from "@/lib/search-params";
 import { BODY_TYPE_LABEL, CONDITION_LABEL, DRIVETRAIN_LABEL, FUEL_LABEL, TRANSMISSION_LABEL, formatKm, formatPrice } from "@/lib/labels";
@@ -23,8 +24,8 @@ export default async function VehiclesPage({ searchParams }: PageProps<"/vehicul
   const [result, facets, brands, features, points, modelTrims] = await Promise.all([
     searchVehicles(f),
     getFacets(f),
-    db.brand.findMany({ orderBy: { name: "asc" }, select: { slug: true, name: true, models: { select: { slug: true, name: true }, orderBy: { name: "asc" } } } }),
-    db.feature.findMany({ orderBy: { name: "asc" }, select: { slug: true, name: true, category: true } }),
+    getBrowseCatalog(),
+    db.feature.findMany({ orderBy: { name: "asc" }, select: { slug: true, name: true, category: true, icon: true } }),
     mapMode ? searchMapPoints(f) : Promise.resolve([]),
     f.marca && f.modelo
       ? db.trim.findMany({ where: { model: { slug: f.modelo, brand: { slug: f.marca } } }, orderBy: { name: "asc" }, select: { id: true, slug: true, name: true } })
@@ -166,10 +167,10 @@ function Filters({
 }: {
   f: SearchFilters;
   values: Record<string, string>;
-  brands: { slug: string; name: string; models: { slug: string; name: string }[] }[];
+  brands: BrowseBrand[];
   trims: { slug: string; name: string; count: number }[];
   facets: Awaited<ReturnType<typeof getFacets>>;
-  features: { slug: string; name: string; category: import("@/generated/prisma/enums").FeatureCategory }[];
+  features: { slug: string; name: string; category: import("@/generated/prisma/enums").FeatureCategory; icon: string }[];
   qs: string;
 }) {
   return (
@@ -178,7 +179,14 @@ function Filters({
       values={values}
       selectedFeatures={f.car ?? []}
       brands={brands
-        .map((b) => ({ ...b, count: facets.brands[b.slug] ?? 0 }))
+        .map((b) => ({
+          slug: b.slug,
+          name: b.name,
+          color: b.color,
+          logo: b.logo,
+          count: facets.brands[b.slug] ?? 0,
+          models: b.models.map((m) => ({ slug: m.slug, name: m.name })),
+        }))
         .filter((b) => b.count > 0 || b.slug === f.marca)}
       trims={trims}
       typeCounts={facets.types}

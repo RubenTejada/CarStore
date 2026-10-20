@@ -26,7 +26,7 @@ const unsplash = (id: string) => `https://images.unsplash.com/photo-${id}?auto=f
 const BRANDS: { name: string; icon?: string; color: string; models: [string, BodyType][] }[] = [
   { name: "Toyota", icon: "toyota", color: "EB0A1E", models: [["Corolla", "SEDAN"], ["Camry", "SEDAN"], ["Yaris", "HATCHBACK"], ["RAV4", "JEEPETA"], ["Land Cruiser Prado", "JEEPETA"], ["4Runner", "JEEPETA"], ["Hilux", "PICKUP"], ["Tacoma", "PICKUP"], ["Sienna", "MINIVAN"], ["Hiace", "VAN"]] },
   { name: "Honda", icon: "honda", color: "E40521", models: [["Civic", "SEDAN"], ["Accord", "SEDAN"], ["Fit", "HATCHBACK"], ["CR-V", "JEEPETA"], ["HR-V", "JEEPETA"], ["Pilot", "JEEPETA"], ["Odyssey", "MINIVAN"]] },
-  { name: "Hyundai", icon: "hyundai", color: "002C5E", models: [["Accent", "SEDAN"], ["Elantra", "SEDAN"], ["Sonata", "SEDAN"], ["i30", "HATCHBACK"], ["Tucson", "JEEPETA"], ["Santa Fe", "JEEPETA"], ["Creta", "JEEPETA"], ["H-1", "VAN"]] },
+  { name: "Hyundai", icon: "hyundai", color: "002C5E", models: [["Accent", "SEDAN"], ["Elantra", "SEDAN"], ["Sonata", "SEDAN"], ["i30", "HATCHBACK"], ["Tucson", "JEEPETA"], ["Santa Fe", "JEEPETA"], ["Creta", "JEEPETA"], ["Staria", "MINIVAN"], ["H-1", "VAN"]] },
   { name: "Kia", icon: "kia", color: "05141F", models: [["Rio", "SEDAN"], ["K5", "SEDAN"], ["Picanto", "HATCHBACK"], ["Sportage", "JEEPETA"], ["Sorento", "JEEPETA"], ["Seltos", "JEEPETA"], ["Carnival", "MINIVAN"]] },
   { name: "Nissan", icon: "nissan", color: "C3002F", models: [["Sentra", "SEDAN"], ["Altima", "SEDAN"], ["Versa", "SEDAN"], ["Kicks", "JEEPETA"], ["Juke", "JEEPETA"], ["X-Trail", "JEEPETA"], ["Frontier", "PICKUP"], ["GT-R", "COUPE"], ["Urvan", "VAN"]] },
   { name: "Mitsubishi", icon: "mitsubishi", color: "E60012", models: [["Mirage", "HATCHBACK"], ["Outlander", "JEEPETA"], ["Montero Sport", "JEEPETA"], ["L200", "PICKUP"]] },
@@ -35,6 +35,7 @@ const BRANDS: { name: string; icon?: string; color: string; models: [string, Bod
   { name: "Ford", icon: "ford", color: "00274E", models: [["Mustang", "COUPE"], ["Explorer", "JEEPETA"], ["Expedition", "JEEPETA"], ["Escape", "JEEPETA"], ["F-150", "PICKUP"], ["F-150 Raptor", "PICKUP"], ["Ranger", "PICKUP"], ["Transit", "VAN"]] },
   { name: "Chevrolet", icon: "chevrolet", color: "CD9834", models: [["Spark", "HATCHBACK"], ["Camaro", "COUPE"], ["Corvette", "COUPE"], ["Tahoe", "JEEPETA"], ["Colorado", "PICKUP"], ["Silverado", "PICKUP"]] },
   { name: "Jeep", icon: "jeep", color: "000000", models: [["Wrangler", "JEEPETA"], ["Grand Cherokee", "JEEPETA"], ["Compass", "JEEPETA"], ["Gladiator", "PICKUP"]] },
+  { name: "Chrysler", icon: "chrysler", color: "000000", models: [["Pacifica", "MINIVAN"], ["300", "SEDAN"]] },
   { name: "Dodge", icon: "dodge", color: "BA0C2F", models: [["Challenger", "COUPE"], ["Charger", "SEDAN"], ["Durango", "JEEPETA"]] },
   { name: "Volkswagen", icon: "volkswagen", color: "151F5D", models: [["Jetta", "SEDAN"], ["Golf", "HATCHBACK"], ["Polo", "HATCHBACK"], ["Tiguan", "JEEPETA"], ["Amarok", "PICKUP"], ["Transporter", "VAN"]] },
   { name: "BMW", icon: "bmw", color: "0066B1", models: [["Serie 3", "SEDAN"], ["Serie 5", "SEDAN"], ["Serie 7", "SEDAN"], ["Serie 4", "COUPE"], ["M4", "COUPE"], ["X3", "JEEPETA"], ["X5", "JEEPETA"]] },
@@ -56,7 +57,8 @@ const BRANDS: { name: string; icon?: string; color: string; models: [string, Bod
 ];
 
 // ---------- Fotos demo (Unsplash), clasificadas por marca / modelo ----------
-type PhotoEntry = { brand: string; model: string; color: string; photos: string[]; minYear: number; price: [number, number]; currency?: "USD" };
+// `trim` fija la versión de catálogo (debe existir en MODEL_TRIMS); sin él se elige al azar.
+type PhotoEntry = { brand: string; model: string; trim?: string; color: string; photos: string[]; minYear: number; price: [number, number]; currency?: "USD" };
 const INTERIORS = ["1449965408869-eaa3f722e40d", "1610647752706-3bb12232b3ab"];
 const CATALOG: PhotoEntry[] = [
   { brand: "Toyota", model: "Camry", color: "Gris", photos: ["1621007947382-bb3c3994e3fb"], minYear: 2019, price: [1_450_000, 2_300_000] },
@@ -112,6 +114,41 @@ const CATALOG: PhotoEntry[] = [
   { brand: "Tesla", model: "Model Y", color: "Blanco", photos: ["1600661653561-629509216228"], minYear: 2022, price: [2_800_000, 3_500_000] },
   { brand: "Volvo", model: "XC60", color: "Azul", photos: ["1629897048514-3dd7414fe72a"], minYear: 2019, price: [2_900_000, 3_900_000] },
   { brand: "Fiat", model: "500", color: "Azul", photos: ["1549317661-bd32c8ce0db2"], minYear: 2016, price: [620_000, 900_000] },
+  // Modelos con versión fija (p. ej. Kia Sorento SX)
+  { brand: "Kia", model: "Sorento", trim: "SX", color: "Blanco", photos: ["1681965363638-0a59618faa1a"], minYear: 2021, price: [2_600_000, 3_200_000] },
+  { brand: "Kia", model: "Sorento", trim: "EX", color: "Plata", photos: ["1693456356273-b0bfab25c4bf", "1695269912852-0615abff3b3c"], minYear: 2021, price: [2_200_000, 2_800_000] },
+  { brand: "Kia", model: "Sorento", trim: "SX Prestige", color: "Gris", photos: ["1694649686884-0d62d0dc47d1"], minYear: 2022, price: [3_000_000, 3_600_000] },
+  { brand: "Kia", model: "Sorento", trim: "X-Line", color: "Plata", photos: ["1734541439611-4fda07e41007"], minYear: 2023, price: [3_100_000, 3_700_000] },
+  { brand: "Kia", model: "Sorento", trim: "LX", color: "Negro", photos: ["1728535530283-27eb9a380ce6"], minYear: 2021, price: [1_900_000, 2_400_000] },
+  { brand: "Kia", model: "Sportage", trim: "EX", color: "Gris", photos: ["1688893288248-3338b8491a46"], minYear: 2023, price: [1_800_000, 2_300_000] },
+  { brand: "Kia", model: "Sportage", trim: "X-Pro", color: "Negro", photos: ["1649921777129-a28a26031a03"], minYear: 2023, price: [2_200_000, 2_700_000] },
+  { brand: "Hyundai", model: "Tucson", trim: "SEL", color: "Gris", photos: ["1705624843697-4461f9dce482"], minYear: 2022, price: [1_700_000, 2_200_000] },
+  { brand: "Hyundai", model: "Tucson", trim: "N Line", color: "Rojo", photos: ["1646029642262-022158ff5794"], minYear: 2022, price: [2_000_000, 2_500_000] },
+  { brand: "Hyundai", model: "Tucson", trim: "Limited", color: "Blanco", photos: ["1638715403373-ab0e256782f7"], minYear: 2022, price: [2_200_000, 2_700_000] },
+  { brand: "Hyundai", model: "Tucson", trim: "SE", color: "Gris", photos: ["1575090536203-2a6193126514"], minYear: 2016, price: [950_000, 1_350_000] },
+  { brand: "Hyundai", model: "Santa Fe", trim: "Limited", color: "Blanco", photos: ["1646728502468-06d9c7b3c2c2"], minYear: 2019, price: [2_100_000, 3_000_000] },
+  { brand: "Toyota", model: "Corolla", trim: "SE", color: "Blanco", photos: ["1638618164682-12b986ec2a75"], minYear: 2020, price: [1_150_000, 1_550_000] },
+  { brand: "Toyota", model: "Corolla", trim: "LE", color: "Blanco", photos: ["1623869675781-80aa31012a5a"], minYear: 2019, price: [980_000, 1_300_000] },
+  { brand: "Toyota", model: "Hilux", trim: "SR", color: "Blanco", photos: ["1759213281196-6c5e463b3021"], minYear: 2016, price: [1_900_000, 2_600_000] },
+  { brand: "Toyota", model: "Hilux", trim: "GR-S", color: "Negro", photos: ["1641333326784-24a9c21d3c4e"], minYear: 2022, price: [3_200_000, 3_900_000] },
+  { brand: "Toyota", model: "Hilux", trim: "SRV", color: "Plata", photos: ["1631377875413-b1e3e660bfa2"], minYear: 2017, price: [2_300_000, 3_000_000] },
+  { brand: "Toyota", model: "Land Cruiser Prado", trim: "VX", color: "Blanco", photos: ["1670736297573-fde2cbcf1de7"], minYear: 2018, price: [3_800_000, 5_400_000] },
+  { brand: "Toyota", model: "Land Cruiser Prado", trim: "TX", color: "Plata", photos: ["1603094543704-64cdce2d2532", "1603094539392-0d73239f4682"], minYear: 2010, price: [1_600_000, 2_400_000] },
+  { brand: "Honda", model: "Civic", trim: "Si", color: "Negro", photos: ["1594070319944-7c0cbebb6f58"], minYear: 2017, price: [1_500_000, 2_000_000] },
+  { brand: "Honda", model: "Civic", trim: "EX", color: "Negro", photos: ["1761315087712-4b1bd53ce39b"], minYear: 2018, price: [1_150_000, 1_650_000] },
+  { brand: "Honda", model: "Civic", trim: "Type R", color: "Rojo", photos: ["1570303278489-041bd897a873"], minYear: 2017, price: [42_000, 55_000], currency: "USD" },
+  { brand: "Honda", model: "Fit", trim: "LX", color: "Gris", photos: ["1742021923146-039f25019c0a"], minYear: 2012, price: [480_000, 650_000] },
+  { brand: "Honda", model: "Fit", trim: "EX", color: "Negro", photos: ["1690225318015-78831b05fcac"], minYear: 2018, price: [700_000, 950_000] },
+  { brand: "Mazda", model: "CX-5", trim: "Signature", color: "Negro", photos: ["1743114713466-f12a85992a75"], minYear: 2021, price: [2_300_000, 2_900_000] },
+  { brand: "Mazda", model: "CX-5", trim: "Preferred", color: "Gris", photos: ["1762077656380-22733f2cd8da"], minYear: 2018, price: [1_500_000, 2_100_000] },
+  // Minivans
+  { brand: "Kia", model: "Carnival", trim: "SX", color: "Plata", photos: ["1675311401495-6fb9a4564573", "1675311183084-755007dbb223", "1675311149330-ff19be4aa6be"], minYear: 2022, price: [2_900_000, 3_600_000] },
+  { brand: "Kia", model: "Carnival", trim: "SX Prestige", color: "Blanco", photos: ["1672216197924-89b8d14a47b1"], minYear: 2022, price: [3_400_000, 4_200_000] },
+  { brand: "Kia", model: "Carnival", trim: "EX", color: "Gris", photos: ["1709791195523-4e9382c2dc6b"], minYear: 2022, price: [2_600_000, 3_200_000] },
+  { brand: "Kia", model: "Carnival", trim: "LX", color: "Gris", photos: ["1653022779664-3a9d0616548c"], minYear: 2022, price: [2_300_000, 2_800_000] },
+  { brand: "Toyota", model: "Sienna", trim: "XLE", color: "Gris", photos: ["1648902180388-e52c0fdebcd4"], minYear: 2021, price: [3_000_000, 3_900_000] },
+  { brand: "Chrysler", model: "Pacifica", trim: "Limited", color: "Plata", photos: ["1623371857133-6d5552bbdc13", "1623371871371-5ce94f7188df"], minYear: 2017, price: [2_100_000, 3_200_000] },
+  { brand: "Hyundai", model: "Staria", trim: "Lounge", color: "Negro", photos: ["1776929484525-d5a85a426949"], minYear: 2022, price: [2_700_000, 3_500_000] },
 ];
 
 const COVERS = ["1543465077-db45d34b88a5", "1617788138017-80ad40651399", "1583121274602-3e2820c69888", "1590362891991-f776e747a588"];
@@ -199,6 +236,7 @@ const MODEL_TRIMS: Record<string, string[]> = {
   "Hyundai/Tucson": ["SE", "SEL", "N Line", "Limited"],
   "Hyundai/Santa Fe": ["SE", "SEL", "XRT", "Limited", "Calligraphy"],
   "Hyundai/Creta": ["GL", "GLS", "Limited"],
+  "Hyundai/Staria": ["Wagon", "Premium", "Lounge"],
   "Hyundai/H-1": ["Cargo", "Pasajeros"],
   "Kia/Rio": ["LX", "S", "EX"],
   "Kia/K5": ["LXS", "GT-Line", "EX", "GT"],
@@ -247,6 +285,8 @@ const MODEL_TRIMS: Record<string, string[]> = {
   "Jeep/Grand Cherokee": ["Laredo", "Altitude", "Limited", "Overland", "Summit", "Trailhawk"],
   "Jeep/Compass": ["Sport", "Latitude", "Limited", "Trailhawk"],
   "Jeep/Gladiator": ["Sport", "Overland", "Rubicon", "Mojave"],
+  "Chrysler/Pacifica": ["Touring", "Touring L", "Limited", "Pinnacle", "Hybrid"],
+  "Chrysler/300": ["Touring", "Touring L", "300S", "300C"],
   "Dodge/Challenger": ["SXT", "GT", "R/T", "R/T Scat Pack", "SRT Hellcat"],
   "Dodge/Charger": ["SXT", "GT", "R/T", "Scat Pack", "SRT Hellcat"],
   "Dodge/Durango": ["SXT", "GT", "R/T", "Citadel", "SRT"],
@@ -464,7 +504,9 @@ async function main() {
       const featured = dealer && (featuredLeft.get(dealer.id) ?? 0) > 0 && rand() < 0.4;
       if (featured && dealer) featuredLeft.set(dealer.id, featuredLeft.get(dealer.id)! - 1);
       const r = rand();
-      const catalogTrim = model.trims.length && r < 0.85 ? pick(model.trims) : null;
+      const pinnedTrim = entry.trim ? model.trims.find((t) => t.name === entry.trim) : undefined;
+      if (entry.trim && !pinnedTrim) throw new Error(`Versión no encontrada: ${entry.brand} ${entry.model} ${entry.trim}`);
+      const catalogTrim = pinnedTrim ?? (model.trims.length && r < 0.85 ? pick(model.trims) : null);
       const trim = catalogTrim?.name ?? (r < 0.92 ? null : pick(LOOSE_TRIMS));
       const photos = [...entry.photos, ...CATALOG.filter((e) => e !== entry && e.brand === entry.brand && e.model === entry.model).flatMap((e) => e.photos).slice(0, 2), ...INTERIORS];
 
@@ -490,7 +532,7 @@ async function main() {
           intColor: pick(["Negro", "Beige", "Gris", "Marrón"]),
           doors: bodyType === "COUPE" || bodyType === "CONVERTIBLE" ? 2 : bodyType === "VAN" ? 3 : 4,
           seats: bodyType === "COUPE" || bodyType === "CONVERTIBLE" ? 4 : bodyType === "VAN" || bodyType === "MINIVAN" ? 8 : 5,
-          description: `${entry.brand} ${entry.model} ${year} en excelentes condiciones. ${isNew ? "Vehículo nuevo con garantía de fábrica." : "Mantenimientos al día, papeles en regla y listo para traspaso."} Aceptamos financiamiento y vehículo como parte de pago.`,
+          description: `${entry.brand} ${entry.model}${trim ? ` ${trim}` : ""} ${year} en excelentes condiciones. ${isNew ? "Vehículo nuevo con garantía de fábrica." : "Mantenimientos al día, papeles en regla y listo para traspaso."} Aceptamos financiamiento y vehículo como parte de pago.`,
           province,
           lat: base.lat + (rand() - 0.5) * jitter,
           lng: base.lng + (rand() - 0.5) * jitter,

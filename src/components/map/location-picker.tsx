@@ -5,6 +5,7 @@ import { APIProvider, AdvancedMarker, Map } from "@vis.gl/react-google-maps";
 import { Crosshair } from "lucide-react";
 import { input, label, button } from "@/components/ui/styles";
 import { MAPS_KEY, MAP_ID } from "./map-view";
+import { MarkerPin, PIN_COLOR } from "./marker-pin";
 import { SchematicMap } from "./schematic-map";
 
 /** Selector de ubicación: clic en el mapa (o arrastrar el marcador) para fijar lat/lng. */
@@ -38,7 +39,11 @@ export function LocationPicker({ defaultLat, defaultLng }: { defaultLat: number;
                 position={pos}
                 draggable
                 onDragEnd={(e) => e.latLng && setPos({ lat: +e.latLng.lat().toFixed(5), lng: +e.latLng.lng().toFixed(5) })}
-              />
+              >
+                <MarkerPin color={PIN_COLOR.vehicle} width={40}>
+                  <span className="size-3 rounded-full bg-white" />
+                </MarkerPin>
+              </AdvancedMarker>
             </Map>
           </APIProvider>
         </div>

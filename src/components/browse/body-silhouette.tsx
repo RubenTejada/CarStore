@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { BodyType } from "@/generated/prisma/enums";
 import { cn } from "@/lib/cn";
 
@@ -6,6 +7,7 @@ import { cn } from "@/lib/cn";
  * `top` traza el perfil desde la base trasera hasta la base delantera (y = SILL);
  * la línea inferior con los pasos de rueda se genera a partir de `wheels`.
  * Las ruedas llevan la clase `wheel` para animarlas (girar) desde el padre.
+ * `children` se dibuja detrás de la carrocería (p. ej. la carga de la camioneta).
  */
 const SILL = 38;
 const TIRE = 8.5;
@@ -14,8 +16,9 @@ type Shape = { top: string; glass: string; wheels: [number, number]; arch: numbe
 
 const SHAPES: Record<BodyType, Shape> = {
   SEDAN: {
-    top: "M5 38L5 30Q5 26 9 25L30 23C38 14 44 12 54 12L70 12C78 12 84 16 90 22L106 25Q115 27 115 32L115 38",
-    glass: "M34 23.5C40.5 16.5 45 14.5 54 14.5L60 14.5L60 23.5ZM63 14.5L70 14.5C76 14.5 81 17.5 86 23.5L63 23.5Z",
+    // Cabina hacia atrás: luneta corta e inclinada, parabrisas largo y capó más largo que el baúl.
+    top: "M5 38L5 29Q5 25 9 24.5L26 23C31 15 35 12.5 44 12L62 12C71 12 78 16 88 23.5L106 25.5Q115 27 115 32L115 38",
+    glass: "M30.5 23.5C34.5 17 37.5 14.8 44 14.5L51 14.5L51 23.5ZM54 14.5L62 14.5C70 14.5 76 17.5 83.5 23.5L54 23.5Z",
     wheels: [26, 92],
     arch: 10.5,
   },
@@ -72,10 +75,11 @@ function bodyPath(s: Shape) {
   return `${s.top}L${front + r} ${SILL}A${r} ${r} 0 0 0 ${front - r} ${SILL}L${rear + r} ${SILL}A${r} ${r} 0 0 0 ${rear - r} ${SILL}Z`;
 }
 
-export function BodySilhouette({ type, className }: { type: BodyType; className?: string }) {
+export function BodySilhouette({ type, className, children }: { type: BodyType; className?: string; children?: ReactNode }) {
   const s = SHAPES[type];
   return (
     <svg viewBox="0 0 120 48" className={cn("overflow-visible", className)} aria-hidden>
+      {children}
       <path d={bodyPath(s)} fill="currentColor" />
       {s.extra && <path d={s.extra} fill="currentColor" />}
       {s.glass && <path d={s.glass} fill="var(--glass, rgba(255,255,255,0.55))" />}

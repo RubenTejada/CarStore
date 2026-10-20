@@ -108,6 +108,22 @@ export const COLORS = [
   "Amarillo",
 ];
 
+/** Muestra de color para los filtros (mismo orden y nombres que `COLORS`). */
+export const COLOR_HEX: Record<string, string> = {
+  Blanco: "#ffffff",
+  Negro: "#111111",
+  Gris: "#6b7280",
+  Plata: "#c0c6ce",
+  Rojo: "#c81e2d",
+  Azul: "#1e4fa3",
+  Verde: "#2f7d46",
+  Beige: "#d9c7a3",
+  Marrón: "#6b4428",
+  Dorado: "#c9a227",
+  Naranja: "#e8731a",
+  Amarillo: "#f5c400",
+};
+
 const dop = new Intl.NumberFormat("es-DO", {
   style: "currency",
   currency: "DOP",

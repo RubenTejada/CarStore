@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { OUTLINE_PATH, VIEW, project, unproject } from "./dr-outline";
+import { PIN_COLOR, PIN_PATH, PIN_VIEW } from "./marker-pin";
 import type { MapPoint } from "./types";
 
 type Group = { key: string; x: number; y: number; points: MapPoint[] };
@@ -19,13 +20,19 @@ export function SchematicMap({
   className,
   onPick,
   picked,
+  me,
   note = true,
+  children,
 }: {
   points: MapPoint[];
   className?: string;
   onPick?: (pos: { lat: number; lng: number }) => void;
   picked?: { lat: number; lng: number } | null;
+  /** Ubicación del visitante (punto azul). */
+  me?: { lat: number; lng: number } | null;
   note?: boolean;
+  /** Controles superpuestos (p. ej. «Mi ubicación»). */
+  children?: ReactNode;
 }) {
   const [open, setOpen] = useState<string | null>(null);
 
@@ -43,6 +50,7 @@ export function SchematicMap({
 
   const active = groups.find((g) => g.key === open);
   const pickedXY = picked ? project(picked.lat, picked.lng) : null;
+  const meXY = me ? project(me.lat, me.lng) : null;
 
   return (
     <div className={cn("relative w-full overflow-hidden rounded-xl bg-[#0e2a55]", className)}>
@@ -72,14 +80,13 @@ export function SchematicMap({
         {groups.map((g) => {
           const dealer = g.points.some((p) => p.kind === "dealer");
           const n = g.points.length;
-          const r = n > 1 ? Math.min(30, 13 + Math.sqrt(n) * 4) : 10;
           return (
             <g
               key={g.key}
               role="button"
               tabIndex={0}
               aria-label={`${n} ${n === 1 ? g.points[0].title : "resultados"} aquí`}
-              className="cursor-pointer outline-none [&:focus-visible>circle]:stroke-[#d0142c]"
+              className="cursor-pointer outline-none [&:focus-visible_path]:stroke-[#f5b700]"
               onClick={(e) => {
                 e.stopPropagation();
                 setOpen(g.key === open ? null : g.key);
@@ -91,23 +98,40 @@ export function SchematicMap({
                 }
               }}
             >
-              <circle cx={g.x} cy={g.y} r={r + 6} fill={dealer ? "rgba(11,42,91,0.18)" : "rgba(208,20,44,0.18)"} />
-              <circle cx={g.x} cy={g.y} r={r} fill={dealer ? "#0b2a5b" : "#d0142c"} stroke="#fff" strokeWidth="3" />
-              {n > 1 && (
-                <text x={g.x} y={g.y + 1} textAnchor="middle" dominantBaseline="middle" fill="#fff" fontSize="17" fontWeight="800">
-                  {n}
-                </text>
-              )}
+              <SvgPin x={g.x} y={g.y} scale={n > 1 ? 1.1 + Math.min(0.6, Math.sqrt(n) * 0.1) : 1.1} color={dealer ? PIN_COLOR.dealer : PIN_COLOR.vehicle}>
+                {n > 1 ? (
+                  <text x={PIN_VIEW.w / 2} y={PIN_VIEW.headY + 1} textAnchor="middle" dominantBaseline="middle" fill="#fff" fontSize="15" fontWeight="800">
+                    {n}
+                  </text>
+                ) : (
+                  <circle cx={PIN_VIEW.w / 2} cy={PIN_VIEW.headY} r="6" fill="#fff" />
+                )}
+              </SvgPin>
             </g>
           );
         })}
         {pickedXY && (
           <g pointerEvents="none">
-            <circle cx={pickedXY.x} cy={pickedXY.y} r="16" fill="rgba(208,20,44,0.25)" />
-            <circle cx={pickedXY.x} cy={pickedXY.y} r="8" fill="#d0142c" stroke="#fff" strokeWidth="3" />
+            <SvgPin x={pickedXY.x} y={pickedXY.y} scale={1.2} color={PIN_COLOR.vehicle}>
+              <circle cx={PIN_VIEW.w / 2} cy={PIN_VIEW.headY} r="6" fill="#fff" />
+            </SvgPin>
+          </g>
+        )}
+        {meXY && (
+          <g pointerEvents="none" aria-label="Tu ubicación">
+            <circle cx={meXY.x} cy={meXY.y} r="14" fill="rgba(245,183,0,0.4)" />
+            <SvgPin x={meXY.x} y={meXY.y} scale={1.5} color={PIN_COLOR.me}>
+              <circle cx={PIN_VIEW.w / 2} cy={PIN_VIEW.headY} r="7" fill={PIN_COLOR.dealer} />
+            </SvgPin>
+            <rect x={meXY.x - 52} y={meXY.y - 112} width="104" height="26" rx="6" fill={PIN_COLOR.dealer} />
+            <text x={meXY.x} y={meXY.y - 98} textAnchor="middle" dominantBaseline="middle" fill="#fff" fontSize="15" fontWeight="800" letterSpacing="0.5">
+              ESTÁS AQUÍ
+            </text>
           </g>
         )}
       </svg>
+
+      {children}
 
       {active && (
         <div
@@ -115,7 +139,8 @@ export function SchematicMap({
           style={{
             left: `clamp(0.5rem, calc(${(active.x / VIEW.w) * 100}% - 9rem), calc(100% - 18.5rem))`,
             top: active.y / VIEW.h > 0.55 ? undefined : `calc(${(active.y / VIEW.h) * 100}% + 1.5rem)`,
-            bottom: active.y / VIEW.h > 0.55 ? `calc(${(1 - active.y / VIEW.h) * 100}% + 1.5rem)` : undefined,
+            // Por encima del pin (su cabeza queda sobre el punto).
+            bottom: active.y / VIEW.h > 0.55 ? `calc(${(1 - active.y / VIEW.h) * 100}% + 3.75rem)` : undefined,
           }}
         >
           <button type="button" onClick={() => setOpen(null)} className="absolute top-1 right-1 rounded-md p-1 hover:bg-black/5" aria-label="Cerrar">
@@ -138,6 +163,19 @@ export function SchematicMap({
         </p>
       )}
     </div>
+  );
+}
+
+/** Pin con la punta en (x, y); `children` se dibuja en coordenadas del pin (cabeza en PIN_VIEW.headY). */
+function SvgPin({ x, y, scale, color, children }: { x: number; y: number; scale: number; color: string; children?: ReactNode }) {
+  return (
+    <>
+      <ellipse cx={x} cy={y} rx={6 * scale} ry={2.5 * scale} fill="rgba(0,0,0,0.3)" />
+      <g transform={`translate(${x - (PIN_VIEW.w / 2) * scale} ${y - PIN_VIEW.tipY * scale}) scale(${scale})`}>
+        <path d={PIN_PATH} fill={color} stroke="#fff" strokeWidth="3" strokeLinejoin="round" />
+        {children}
+      </g>
+    </>
   );
 }
 

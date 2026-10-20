@@ -34,6 +34,8 @@ npm run dev                   # http://localhost:3000
 
 Para ver los mapas de Google, define `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` (Maps JavaScript API) en `.env`.
 
+El estilo del mapa con los colores del portal está en `docs/google-maps-estilo.json`. Como los marcadores avanzados requieren un Map ID, el estilo se aplica en Google Cloud: **Google Maps Platform → Estilos de mapa → Crear estilo → Importar JSON**, luego asócialo a un Map ID (JavaScript, vectorial) y ponlo en `NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID`.
+
 ### Usuarios demo
 
 Todos usan la contraseña definida en `SEED_DEMO_PASSWORD`.

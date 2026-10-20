@@ -4,13 +4,15 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { ArrowRight, Check, ChevronLeft, Droplets, Flame, Fuel as FuelIcon, Gauge, Infinity as InfinityIcon, Joystick, Leaf, Search, Zap, type LucideIcon } from "lucide-react";
+import { ArrowRight, Check, ChevronLeft, Search, type LucideIcon } from "lucide-react";
 import type { BodyType, Fuel, Transmission } from "@/generated/prisma/enums";
 import { BODY_TYPES, FUEL_LABEL, TRANSMISSION_LABEL } from "@/lib/labels";
 import { cn } from "@/lib/cn";
 import { FeatureIcon } from "@/lib/feature-icons";
+import { FUEL_ICON, TRANSMISSION_ICON } from "@/lib/spec-icons";
 import type { StockRow } from "@/lib/catalog";
 import { BodySilhouette } from "./body-silhouette";
+import { BodyTypeScene } from "./body-type-scene";
 import { BrandLogo, type BrandMark } from "./brand-logo";
 import { prefetchFinderFacets, useFinderFacets } from "./use-finder-facets";
 
@@ -36,19 +38,8 @@ const count = (stock: StockRow[], f: StockFilter, ignoreType = false) =>
 
 const STEPS = ["Tipo", "Marca", "Modelo"];
 
-const FUELS: { value: Fuel; icon: LucideIcon }[] = [
-  { value: "GASOLINE", icon: FuelIcon },
-  { value: "DIESEL", icon: Droplets },
-  { value: "HYBRID", icon: Leaf },
-  { value: "ELECTRIC", icon: Zap },
-  { value: "GLP", icon: Flame },
-];
-
-const TRANSMISSIONS: { value: Transmission; icon: LucideIcon }[] = [
-  { value: "AUTOMATIC", icon: Gauge },
-  { value: "MANUAL", icon: Joystick },
-  { value: "CVT", icon: InfinityIcon },
-];
+const FUELS = (Object.keys(FUEL_ICON) as Fuel[]).map((value) => ({ value, icon: FUEL_ICON[value] }));
+const TRANSMISSIONS = (Object.keys(TRANSMISSION_ICON) as Transmission[]).map((value) => ({ value, icon: TRANSMISSION_ICON[value] }));
 
 export function VehicleFinder({ brands }: { brands: FinderBrand[] }) {
   const router = useRouter();
@@ -238,19 +229,7 @@ export function VehicleFinder({ brands }: { brands: FinderBrand[] }) {
                         data-driving={driving === t.value || undefined}
                         className="group flex h-full w-full flex-col items-start rounded-xl border border-white/10 bg-white/[0.06] p-4 text-left transition-colors hover:border-white/40 hover:bg-white/[0.12] disabled:opacity-40 data-[driving]:border-white/40 data-[driving]:bg-white/[0.12] data-[driving]:opacity-100"
                       >
-                        <span className="relative block h-16 w-full overflow-hidden rounded-lg" aria-hidden>
-                          <span className="scene-item scene-hill" />
-                          <span className="scene-item scene-cloud" />
-                          <span className="scene-item scene-palm" />
-                          <span className="scene-item scene-palm scene-palm-2" />
-                          <span className="scene-road" />
-                          <span className="absolute bottom-[4px] left-1/2 -translate-x-1/2">
-                            <BodySilhouette
-                              type={t.value}
-                              className="scene-car block h-10 w-[100px] text-white sm:h-12 sm:w-[120px] [--glass:rgba(11,26,54,0.55)] [--rim:#8fa3c4] [--tire:#050b18]"
-                            />
-                          </span>
-                        </span>
+                        <BodyTypeScene type={t.value} />
                         <span className="wide mt-3 text-[15px] font-bold">{t.label}</span>
                         <span className="text-sm text-white/60">{n === 1 ? "1 vehículo" : `${n} vehículos`}</span>
                       </button>
@@ -273,20 +252,31 @@ export function VehicleFinder({ brands }: { brands: FinderBrand[] }) {
                 {brandsForType.map(({ brand: b, count }, i) => (
                   <motion.li
                     key={b.slug}
-                    initial={reduce ? false : { opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: i * 0.025 }}
+                    initial={reduce ? false : { opacity: 0, y: 16, scale: 0.8 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ type: "spring", stiffness: 260, damping: 18, delay: i * 0.035 }}
                   >
                     <button
                       type="button"
                       onClick={() => setBrand(b)}
                       onPointerEnter={() => prefetchFinderFacets(params(selection(b)))}
                       onFocus={() => prefetchFinderFacets(params(selection(b)))}
-                      className="group flex w-full flex-col items-center gap-2 rounded-xl bg-white px-2 py-4 text-night transition-transform hover:-translate-y-0.5"
+                      aria-label={`${b.name}: ${count === 1 ? "1 vehículo" : `${count} vehículos`}`}
+                      className="group relative flex w-full flex-col items-center gap-1.5 rounded-xl bg-white px-2 pt-5 pb-3 text-night shadow-sm transition duration-300 ease-out hover:z-10 hover:-translate-y-1 hover:shadow-xl focus-visible:z-10 motion-reduce:transition-none"
                     >
-                      <BrandLogo brand={b} colored className="size-10 grayscale transition-[filter] group-hover:grayscale-0" />
-                      <span className="text-sm font-semibold">{b.name}</span>
-                      <span className="text-xs text-[#566176]">{count}</span>
+                      {/* Nombre de la marca solo al pasar el cursor o con foco de teclado. */}
+                      <span
+                        aria-hidden
+                        className="pointer-events-none absolute -top-3 left-1/2 -translate-x-1/2 translate-y-1 whitespace-nowrap rounded-full bg-night px-2.5 py-1 text-xs font-semibold text-white opacity-0 shadow-lg transition duration-200 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100"
+                      >
+                        {b.name}
+                      </span>
+                      <BrandLogo
+                        brand={b}
+                        colored
+                        className="size-14 grayscale transition duration-300 ease-out group-hover:scale-115 group-hover:-rotate-3 group-hover:grayscale-0 group-focus-visible:grayscale-0 sm:size-16 motion-reduce:transition-none motion-reduce:group-hover:transform-none"
+                      />
+                      <span aria-hidden className="text-xs text-[#566176]">{count}</span>
                     </button>
                   </motion.li>
                 ))}

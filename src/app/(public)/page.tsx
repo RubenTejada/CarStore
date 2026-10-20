@@ -37,11 +37,11 @@ export default async function HomePage() {
           className="pointer-events-none absolute inset-x-0 bottom-6 h-1 bg-[repeating-linear-gradient(90deg,rgba(245,183,0,0.55)_0_56px,transparent_56px_112px)]"
         />
         <div className="relative mx-auto max-w-7xl px-4 pt-12 pb-16 sm:px-6 lg:pt-16">
-          <h1 className="font-logo text-3xl font-bold tracking-tight text-white italic sm:text-4xl">
+          <h1 className="display text-3xl text-white sm:text-4xl">
             ¿Qué vas a <span className="text-[#f5b700]">manejar</span>?
           </h1>
           <p className="mt-4 max-w-xl text-lg text-white/70">
-            {totals} vehículos de {dealers.length} dealers y particulares en toda la República Dominicana. Elige el tipo, la marca, el modelo y lo que no le puede faltar.
+            {totals} vehículos de {dealers.length} dealers y particulares esperan por ti en toda la República Dominicana. Elige el tipo, la marca, el modelo y lo que no le puede faltar.
           </p>
           <div className="mt-8">
             <VehicleFinder brands={brands} />

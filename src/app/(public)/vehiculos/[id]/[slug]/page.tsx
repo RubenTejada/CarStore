@@ -4,6 +4,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import {
   BadgeCheck,
   Calendar,
+  Clock,
   Cog,
   DoorOpen,
   ExternalLink,
@@ -18,6 +19,7 @@ import {
   Wrench,
   type LucideIcon,
 } from "lucide-react";
+import { siApple, siGooglemaps, siUber, siWaze, type SimpleIcon } from "simple-icons";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { canEditVehicle } from "@/lib/listing-rules";
@@ -33,7 +35,7 @@ import {
   formatKm,
   formatPrice,
 } from "@/lib/labels";
-import { googleMapsUrl, vehicleTitle, vehicleUrl, whatsappUrl } from "@/lib/urls";
+import { directionsUrls, googleMapsUrl, vehicleTitle, vehicleUrl, whatsappUrl } from "@/lib/urls";
 import { FeatureIcon } from "@/lib/feature-icons";
 import { Gallery } from "@/components/vehicle/gallery";
 import { VehicleCard } from "@/components/vehicle/vehicle-card";
@@ -98,6 +100,15 @@ export default async function VehiclePage({ params }: PageProps<"/vehiculos/[id]
     [Palette, "Color interior", v.intColor],
     [DoorOpen, "Puertas", v.doors ? String(v.doors) : null],
     [Users, "Pasajeros", v.seats ? String(v.seats) : null],
+  ];
+
+  const address = v.dealer?.address ?? v.province;
+  const routes = directionsUrls(v.lat, v.lng);
+  const routeLinks: [SimpleIcon, string, string][] = [
+    [siGooglemaps, "Google Maps", routes.google],
+    [siWaze, "Waze", routes.waze],
+    [siApple, "Apple Maps", routes.apple],
+    [siUber, "Pedir un Uber", routes.uber],
   ];
 
   const grouped = (Object.keys(FEATURE_CATEGORY_LABEL) as FeatureCategory[])
@@ -205,14 +216,13 @@ export default async function VehiclePage({ params }: PageProps<"/vehiculos/[id]
             )}
             <p className="mt-3 flex items-start gap-1.5 border-t border-line pt-3 text-sm text-muted">
               <MapPin className="mt-0.5 size-4 shrink-0" aria-hidden />
-              {v.dealer?.address ?? v.province}
+              {address}
             </p>
           </div>
         </aside>
       </div>
 
-      <div className="mt-12 grid grid-cols-1 gap-12 lg:grid-cols-[1fr_24rem]">
-        <div className="min-w-0 space-y-12">
+      <div className="mt-12 space-y-12">
           <section>
             <h2 className="display text-2xl">Ficha técnica</h2>
             <dl className="mt-5 grid overflow-hidden rounded-xl border border-line bg-surface sm:grid-cols-2">
@@ -262,20 +272,53 @@ export default async function VehiclePage({ params }: PageProps<"/vehiculos/[id]
               <p className="mt-4 max-w-prose leading-relaxed whitespace-pre-line text-ink/85">{v.description}</p>
             </section>
           )}
-        </div>
 
         <section>
           <h2 className="display text-2xl">Ubicación</h2>
-          <p className="mt-1 text-muted">{v.province}</p>
-          <MapView
-            className="mt-4 h-72"
-            cluster={false}
-            points={[{ id: v.id, lat: v.lat, lng: v.lng, kind: "vehicle", title: `${title} ${v.year}`, subtitle: v.dealer?.name ?? v.province, href: canonical, image: v.photos[0]?.url }]}
-          />
-          <a href={googleMapsUrl(v.lat, v.lng)} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:underline">
-            Abrir en Google Maps
-            <ExternalLink className="size-3.5" aria-hidden />
-          </a>
+          <p className="mt-1 text-muted">{address}</p>
+          <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[1fr_22rem]">
+            <MapView
+              className="h-[24rem] sm:h-[30rem] lg:h-[34rem]"
+              cluster={false}
+              points={[{ id: v.id, lat: v.lat, lng: v.lng, kind: "vehicle", title: `${title} ${v.year}`, subtitle: v.dealer?.name ?? v.province, href: canonical, image: v.photos[0]?.url }]}
+            />
+            <div className="rounded-xl border border-line bg-surface p-5 lg:self-start">
+              <h3 className="wide font-bold">Cómo llegar</h3>
+              <p className="mt-1 text-sm text-muted">Abre la ruta desde donde estás en tu app favorita.</p>
+              <ul className="mt-4 grid gap-2">
+                {routeLinks.map(([icon, name, href]) => (
+                  <li key={name}>
+                    <a href={href} target="_blank" rel="noopener noreferrer" className={cn(button("outline", "md"), "w-full justify-start")}>
+                      <svg viewBox="0 0 24 24" className="size-5 shrink-0" aria-hidden>
+                        <path d={icon.path} fill={icon.hex === "000000" ? "currentColor" : `#${icon.hex}`} />
+                      </svg>
+                      {name}
+                      <ExternalLink className="ml-auto size-3.5 text-muted" aria-hidden />
+                    </a>
+                  </li>
+                ))}
+              </ul>
+              <dl className="mt-5 space-y-3 border-t border-line pt-4 text-sm">
+                <div className="flex items-start gap-2">
+                  <MapPin className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden />
+                  <dt className="sr-only">Dirección</dt>
+                  <dd>{address}</dd>
+                </div>
+                {v.dealer?.hours && (
+                  <div className="flex items-start gap-2">
+                    <Clock className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden />
+                    <dt className="sr-only">Horario</dt>
+                    <dd className="whitespace-pre-line">{v.dealer.hours}</dd>
+                  </div>
+                )}
+              </dl>
+              <a href={googleMapsUrl(v.lat, v.lng)} target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:underline">
+                Ver el punto en Google Maps
+                <ExternalLink className="size-3.5" aria-hidden />
+              </a>
+              <p className="mt-4 text-xs text-muted">Coordina la visita con el vendedor antes de ir.</p>
+            </div>
+          </div>
         </section>
       </div>
 

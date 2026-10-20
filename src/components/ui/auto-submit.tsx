@@ -2,12 +2,13 @@
 
 import { useEffect } from "react";
 
-/** Envía el formulario al cambiar cualquier <select data-autosubmit>. */
+/** Envía el formulario al cambiar cualquier <select> o <input type="radio"> con data-autosubmit. */
 export function AutoSubmit() {
   useEffect(() => {
     const onChange = (e: Event) => {
       const el = e.target as HTMLElement;
-      if (el instanceof HTMLSelectElement && el.dataset.autosubmit !== undefined) el.form?.requestSubmit();
+      const field = el instanceof HTMLSelectElement || (el instanceof HTMLInputElement && el.type === "radio");
+      if (field && el.dataset.autosubmit !== undefined) (el as HTMLSelectElement | HTMLInputElement).form?.requestSubmit();
     };
     document.addEventListener("change", onChange);
     return () => document.removeEventListener("change", onChange);
