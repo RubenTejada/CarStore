@@ -89,6 +89,21 @@ const EXTRAS: Partial<Record<BodyType, ReactNode>> = {
       </g>
     </g>
   ),
+  // Conductor en la cabina abierta (x=44 a x=69): sale al arrancar y se baja las gafas.
+  CONVERTIBLE: (
+    <g className="driver">
+      <path d="M61 18L62.6 23" stroke="#050b18" strokeWidth={1.3} strokeLinecap="round" />
+      <path d="M49.5 24Q49.5 19.2 54 18.8Q58.6 19.2 59 24Z" fill="#3b82c4" />
+      <path d="M56.5 20.6L61.3 20" stroke="#c98d63" strokeWidth={1.4} strokeLinecap="round" />
+      <circle cx={54.2} cy={15.4} r={3.3} fill="#c98d63" />
+      <path d="M51 16Q50.4 11.8 54.4 11.9Q57.6 12 57.6 14L53.6 14.1Q52.6 14.6 52.4 16.6Z" fill="#2b1b12" />
+      <g className="driver-shades">
+        <path d="M52.6 14.9H56" stroke="#050b18" strokeWidth={0.6} />
+        <rect x={55.4} y={14.1} width={2.6} height={1.6} rx={0.6} fill="#050b18" />
+        <path d="M56.1 14.6H57.2" stroke="#8fa3c4" strokeWidth={0.4} strokeLinecap="round" />
+      </g>
+    </g>
+  ),
   // Parrilla en el techo (y=8) con maletas.
   MINIVAN: (
     <g>

@@ -646,6 +646,27 @@ body {
   transform-origin: 50% 100%;
 }
 
+/* Conductor del convertible: asoma desde la cabina al arrancar y se baja las gafas. */
+@keyframes driver-in {
+  from {
+    transform: translateY(7px);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes shades-on {
+  from {
+    transform: translateY(-2.5px);
+  }
+  to {
+    transform: none;
+  }
+}
+.driver {
+  opacity: 0;
+}
+
 /*
  * Activación: hover/foco del botón, o `data-driving` al seleccionarlo. Las reglas de
  * `data-driving` llevan `.group` para igualar la especificidad del hover y ganar por orden.
@@ -676,6 +697,16 @@ body {
   animation:
     cargo-load 0.45s cubic-bezier(0.3, 1.4, 0.5, 1) var(--d, 0s) both,
     var(--hop, cargo-hop) 0.3s ease-in-out calc(var(--d, 0s) + 0.45s) infinite alternate;
+}
+
+.group:is(:hover, :focus-visible, [data-driving]) .driver {
+  opacity: 1;
+  animation:
+    driver-in 0.35s cubic-bezier(0.3, 1.4, 0.5, 1) both,
+    cargo-hop 0.3s ease-in-out 0.35s infinite alternate;
+}
+.group:is(:hover, :focus-visible, [data-driving]) .driver-shades {
+  animation: shades-on 0.25s ease-in 0.45s backwards;
 }
 
 /* Ajustes por escenario. */
@@ -768,6 +799,8 @@ body {
   .scene-rig,
   .scene-car,
   .cargo-box,
+  .driver,
+  .driver-shades,
   .scene-car .wheel {
     animation: none !important;
   }

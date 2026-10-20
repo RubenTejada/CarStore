@@ -5,7 +5,7 @@ import { getBrowseCatalog } from "@/lib/catalog";
 import { getFeaturedVehicles } from "@/lib/search";
 import { formatPrice } from "@/lib/labels";
 import { VehicleFinder } from "@/components/browse/vehicle-finder";
-import { BrandLogo } from "@/components/browse/brand-logo";
+import { BrandTileBody, brandCell, brandGrid, brandTile } from "@/components/browse/brand-logo";
 import { VehicleCard } from "@/components/vehicle/vehicle-card";
 import { MapView } from "@/components/map/map-view";
 import { DealerBadge } from "@/components/dealer/dealer-badge";
@@ -41,7 +41,7 @@ export default async function HomePage() {
             ¿Qué vas a <span className="text-[#f5b700]">manejar</span>?
           </h1>
           <p className="mt-4 max-w-xl text-lg text-white/70">
-            {totals} vehículos de {dealers.length} dealers y particulares esperan por ti en toda la República Dominicana. Elige el tipo, la marca, el modelo y lo que no le puede faltar.
+            {totals} vehículos de {dealers.length} dealers y particulares esperan por ti en toda la República Dominicana. Elige el tipo, la marca y el modelo.
           </p>
           <div className="mt-8">
             <VehicleFinder brands={brands} />
@@ -72,22 +72,14 @@ export default async function HomePage() {
 
       <section className="mx-auto max-w-7xl px-4 pt-20 sm:px-6">
         <h2 className="display text-3xl">Marcas</h2>
-        <ul className="mt-6 grid grid-cols-3 overflow-hidden rounded-xl border border-line bg-surface sm:grid-cols-5 lg:grid-cols-8">
-          {brands.map((b) => {
-            const n = brandCounts.get(b.slug) ?? 0;
-            return (
-              <li key={b.slug} className="shadow-[0_0_0_0.5px_var(--line)]">
-                <Link
-                  href={`/vehiculos?marca=${b.slug}`}
-                  className="group flex h-full flex-col items-center gap-3 px-2 py-6 text-center transition-colors hover:bg-surface-2"
-                >
-                  <BrandLogo brand={b} colored className="size-14 text-ink opacity-70 grayscale sm:size-16 transition group-hover:opacity-100 group-hover:grayscale-0" />
-                  <span className="text-sm font-semibold">{b.name}</span>
-                  <span className="text-xs text-muted">{n ? `${n} disponibles` : "Sin publicaciones"}</span>
-                </Link>
-              </li>
-            );
-          })}
+        <ul className={cn("mt-6", brandGrid)}>
+          {brands.map((b) => (
+            <li key={b.slug} className={brandCell}>
+              <Link href={`/vehiculos?marca=${b.slug}`} className={brandTile}>
+                <BrandTileBody brand={b} count={brandCounts.get(b.slug) ?? 0} />
+              </Link>
+            </li>
+          ))}
         </ul>
       </section>
 

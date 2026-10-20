@@ -4,17 +4,15 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { ArrowRight, Check, ChevronLeft, Search, type LucideIcon } from "lucide-react";
+import { ArrowRight, ChevronLeft, Search, type LucideIcon } from "lucide-react";
 import type { BodyType, Fuel, Transmission } from "@/generated/prisma/enums";
 import { BODY_TYPES, FUEL_LABEL, TRANSMISSION_LABEL } from "@/lib/labels";
 import { cn } from "@/lib/cn";
-import { FeatureIcon } from "@/lib/feature-icons";
 import { FUEL_ICON, TRANSMISSION_ICON } from "@/lib/spec-icons";
 import type { StockRow } from "@/lib/catalog";
 import { BodySilhouette } from "./body-silhouette";
 import { BodyTypeScene } from "./body-type-scene";
-import { BrandLogo, type BrandMark } from "./brand-logo";
-import { prefetchFinderFacets, useFinderFacets } from "./use-finder-facets";
+import { BrandLogo, BrandTileBody, brandCell, brandGrid, brandTile, type BrandMark } from "./brand-logo";
 
 type FinderBrand = BrandMark & {
   slug: string;
@@ -47,7 +45,6 @@ export function VehicleFinder({ brands }: { brands: FinderBrand[] }) {
   const [type, setType] = useState<BodyType | null>(null);
   const [brand, setBrandState] = useState<FinderBrand | null>(null);
   const [model, setModel] = useState<string | null>(null);
-  const [picked, setPicked] = useState<string[]>([]);
   const [condition, setCondition] = useState<"" | "nuevo" | "usado">("");
   const [driving, setDriving] = useState<BodyType | null>(null);
   const [fuel, setFuel] = useState<Fuel | null>(null);
@@ -63,12 +60,11 @@ export function VehicleFinder({ brands }: { brands: FinderBrand[] }) {
     }, 520);
   };
   const step = brand ? 2 : type ? 1 : 0;
-  // Cambiar de marca descarta el modelo elegido; las características se conservan.
+  // Cambiar de marca descarta el modelo elegido.
   const setBrand = (b: FinderBrand | null) => {
     setBrandState(b);
     setModel(null);
   };
-  const toggleFeature = (slug: string) => setPicked((p) => (p.includes(slug) ? p.filter((s) => s !== slug) : [...p, slug]));
 
   const filter = useMemo<StockFilter>(
     () => ({ type, condition: condition === "nuevo" ? "NEW" : condition === "usado" ? "USED" : null, fuel, transmission }),
@@ -91,7 +87,7 @@ export function VehicleFinder({ brands }: { brands: FinderBrand[] }) {
     [brands, filter],
   );
 
-  // Mismos parámetros que /vehiculos: sirven para los enlaces y para pedir las facetas.
+  // Mismos parámetros que /vehiculos.
   const params = (extra: Record<string, string | undefined>) => {
     const p = new URLSearchParams();
     if (condition) p.set("condicion", condition);
@@ -102,11 +98,8 @@ export function VehicleFinder({ brands }: { brands: FinderBrand[] }) {
     return p.toString();
   };
   const href = (extra: Record<string, string | undefined>) => `/vehiculos?${params(extra)}`;
-  const selection = (b: FinderBrand) => ({ marca: b.slug, modelo: b === brand ? (model ?? undefined) : undefined, car: [...picked].sort().join(",") || undefined });
-
-  // Facetas del paso de modelos: conteos por modelo y características con resultados para la selección.
-  const facets = useFinderFacets(brand ? params(selection(brand)) : null);
-  const facetsForBrand = brand && facets.dataQuery && new URLSearchParams(facets.dataQuery).get("marca") === brand.slug ? facets.data : null;
+  const models = brand ? brand.models.map((m) => ({ ...m, n: count(m.stock, filter) })).filter((m) => m.n > 0) : [];
+  const total = models.reduce((a, m) => (!model || m.slug === model ? a + m.n : a), 0);
 
   const typeInfo = BODY_TYPES.find((t) => t.value === type);
   const slide = {
@@ -248,35 +241,17 @@ export function VehicleFinder({ brands }: { brands: FinderBrand[] }) {
                   Ver todas las {typeInfo?.plural.toLowerCase()}
                 </Link>
               </div>
-              <ul className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 lg:grid-cols-6">
+              <ul className={brandGrid}>
                 {brandsForType.map(({ brand: b, count }, i) => (
                   <motion.li
                     key={b.slug}
-                    initial={reduce ? false : { opacity: 0, y: 16, scale: 0.8 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    className={brandCell}
+                    initial={reduce ? false : { opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
                     transition={{ type: "spring", stiffness: 260, damping: 18, delay: i * 0.035 }}
                   >
-                    <button
-                      type="button"
-                      onClick={() => setBrand(b)}
-                      onPointerEnter={() => prefetchFinderFacets(params(selection(b)))}
-                      onFocus={() => prefetchFinderFacets(params(selection(b)))}
-                      aria-label={`${b.name}: ${count === 1 ? "1 vehículo" : `${count} vehículos`}`}
-                      className="group relative flex w-full flex-col items-center gap-1.5 rounded-xl bg-white px-2 pt-5 pb-3 text-night shadow-sm transition duration-300 ease-out hover:z-10 hover:-translate-y-1 hover:shadow-xl focus-visible:z-10 motion-reduce:transition-none"
-                    >
-                      {/* Nombre de la marca solo al pasar el cursor o con foco de teclado. */}
-                      <span
-                        aria-hidden
-                        className="pointer-events-none absolute -top-3 left-1/2 -translate-x-1/2 translate-y-1 whitespace-nowrap rounded-full bg-night px-2.5 py-1 text-xs font-semibold text-white opacity-0 shadow-lg transition duration-200 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100"
-                      >
-                        {b.name}
-                      </span>
-                      <BrandLogo
-                        brand={b}
-                        colored
-                        className="size-14 grayscale transition duration-300 ease-out group-hover:scale-115 group-hover:-rotate-3 group-hover:grayscale-0 group-focus-visible:grayscale-0 sm:size-16 motion-reduce:transition-none motion-reduce:group-hover:transform-none"
-                      />
-                      <span aria-hidden className="text-xs text-[#566176]">{count}</span>
+                    <button type="button" onClick={() => setBrand(b)} className={cn("relative", brandTile)}>
+                      <BrandTileBody brand={b} count={count} lively />
                     </button>
                   </motion.li>
                 ))}
@@ -296,99 +271,47 @@ export function VehicleFinder({ brands }: { brands: FinderBrand[] }) {
                 <BrandLogo brand={brand} colored className="size-14 shrink-0" />
                 <div>
                   <p className="display text-2xl">{brand.name}</p>
-                  <p className="text-sm text-[#566176]">Elige un modelo y las características que buscas</p>
+                  <p className="text-sm text-[#566176]">Elige un modelo</p>
                 </div>
               </div>
 
               <h3 className="mt-5 text-sm font-semibold text-white/70">Modelo</h3>
               <ul className="mt-2 flex flex-wrap gap-2">
-                {brand.models
-                  .filter((m) => count(m.stock, filter) > 0)
-                  .map((m, i) => {
-                    const on = model === m.slug;
-                    // Con características elegidas, el conteo exacto viene del servidor.
-                    const n = facetsForBrand ? (facetsForBrand.models[m.slug] ?? 0) : count(m.stock, filter);
-                    return (
-                      <motion.li
-                        key={m.slug}
-                        initial={reduce ? false : { opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: i * 0.04 }}
+                {models.map((m, i) => {
+                  const on = model === m.slug;
+                  return (
+                    <motion.li
+                      key={m.slug}
+                      initial={reduce ? false : { opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.04 }}
+                    >
+                      <button
+                        type="button"
+                        aria-pressed={on}
+                        onClick={() => setModel(on ? null : m.slug)}
+                        className={cn(
+                          "flex min-h-11 items-center gap-2.5 rounded-full border py-2 pr-3 pl-3.5 font-semibold transition-colors",
+                          on ? "border-white bg-white text-night" : "border-white/20 bg-white/10 hover:border-white/50",
+                        )}
                       >
-                        <button
-                          type="button"
-                          aria-pressed={on}
-                          disabled={!on && n === 0}
-                          onClick={() => setModel(on ? null : m.slug)}
-                          className={cn(
-                            "flex min-h-11 items-center gap-2.5 rounded-full border py-2 pr-3 pl-3.5 font-semibold transition-colors disabled:opacity-40",
-                            on ? "border-white bg-white text-night" : "border-white/20 bg-white/10 hover:border-white/50",
-                          )}
-                        >
-                          <BodySilhouette type={m.bodyType} className="h-4 w-10 shrink-0 [--glass:rgba(11,26,54,0.45)] [--rim:#8fa3c4] [--tire:#050b18]" />
-                          {m.name}
-                          <span className={cn("rounded-full px-2 text-xs", on ? "bg-night/10" : "bg-black/25")}>{n}</span>
-                        </button>
-                      </motion.li>
-                    );
-                  })}
+                        <BodySilhouette type={m.bodyType} className="h-4 w-10 shrink-0 [--glass:rgba(11,26,54,0.45)] [--rim:#8fa3c4] [--tire:#050b18]" />
+                        {m.name}
+                        <span className={cn("rounded-full px-2 text-xs", on ? "bg-night/10" : "bg-black/25")}>{m.n}</span>
+                      </button>
+                    </motion.li>
+                  );
+                })}
               </ul>
-
-              <h3 className="mt-5 text-sm font-semibold text-white/70">Características principales</h3>
-              <div aria-busy={facets.loading} className={cn("transition-opacity", facets.loading && facetsForBrand && "opacity-60")}>
-                {facetsForBrand ? (
-                  facetsForBrand.features.length > 0 ? (
-                    <ul className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-                      {facetsForBrand.features.map((f) => {
-                        const on = picked.includes(f.slug);
-                        return (
-                          <li key={f.slug}>
-                            <button
-                              type="button"
-                              aria-pressed={on}
-                              onClick={() => toggleFeature(f.slug)}
-                              className={cn(
-                                "flex h-full min-h-11 w-full items-center gap-2.5 rounded-xl border px-3 py-2 text-left text-sm font-medium transition-colors",
-                                on ? "border-white bg-white text-night" : "border-white/15 bg-white/[0.06] hover:border-white/40",
-                              )}
-                            >
-                              <span className={cn("grid size-8 shrink-0 place-items-center rounded-lg", on ? "bg-accent text-white" : "bg-white/10")}>
-                                {on ? <Check className="size-4" aria-hidden /> : <FeatureIcon icon={f.icon} className="size-4" />}
-                              </span>
-                              <span className="flex-1">{f.name}</span>
-                              <span className={cn("rounded-full px-2 text-xs", on ? "bg-night/10" : "bg-black/25")}>{f.n}</span>
-                            </button>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  ) : (
-                    <p className="mt-2 text-sm text-white/60">Estos vehículos no tienen características registradas.</p>
-                  )
-                ) : facets.error ? (
-                  <p className="mt-2 text-sm text-white/60">No se pudieron cargar las características. Puedes ver los vehículos igualmente.</p>
-                ) : (
-                  <ul className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4" aria-label="Cargando características">
-                    {Array.from({ length: 8 }, (_, i) => (
-                      <li key={i} className="h-12 animate-pulse rounded-xl bg-white/[0.06]" />
-                    ))}
-                  </ul>
-                )}
-              </div>
 
               <div className="mt-6 flex flex-wrap items-center gap-3">
                 <Link
-                  href={href({ marca: brand.slug, modelo: model ?? undefined, car: picked.join(",") || undefined })}
+                  href={href({ marca: brand.slug, modelo: model ?? undefined })}
                   className="inline-flex h-12 items-center gap-2 rounded-xl bg-accent px-5 font-semibold text-white transition-colors hover:bg-accent/90"
                 >
-                  {facetsForBrand && !facets.loading ? (facetsForBrand.total === 1 ? "Ver 1 vehículo" : `Ver ${facetsForBrand.total} vehículos`) : "Ver vehículos"}
+                  {total === 1 ? "Ver 1 vehículo" : `Ver ${total} vehículos`}
                   <ArrowRight className="size-4" aria-hidden />
                 </Link>
-                {picked.length > 0 && (
-                  <button type="button" onClick={() => setPicked([])} className="h-11 rounded-lg px-2 text-sm font-semibold text-white/75 hover:text-white">
-                    Quitar características ({picked.length})
-                  </button>
-                )}
               </div>
             </motion.div>
           )}

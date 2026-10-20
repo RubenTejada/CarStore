@@ -12,7 +12,7 @@ import { cn } from "@/lib/cn";
 const SILL = 38;
 const TIRE = 8.5;
 
-type Shape = { top: string; glass: string; wheels: [number, number]; arch: number; extra?: string };
+type Shape = { top: string; glass: string; wheels: [number, number]; arch: number };
 
 const SHAPES: Record<BodyType, Shape> = {
   SEDAN: {
@@ -47,12 +47,12 @@ const SHAPES: Record<BodyType, Shape> = {
     arch: 10.5,
   },
   CONVERTIBLE: {
-    top: "M5 38L5 29Q5 25 10 24.5L76 24L70.5 16.8Q70.8 15.6 72.6 15.9L80.5 24L106 25Q115 27 115 33L115 38",
-    glass: "",
+    // Roadster: cola alta, joroba tras la cabina, parabrisas inclinado y capó largo que baja al frente.
+    top: "M5 38L5 27Q5 21.5 11 21L31 20.5Q33.5 20.4 35 18.2Q36.5 16.4 38.8 16.8Q41 17.3 42 20.2L44 23.5L69 23.5L64.2 16.9Q64.3 15.7 66 15.9L74 23.6L100 25.4Q112 27 115 31L115 38",
+    // Toma de aire lateral.
+    glass: "M45 30.5Q60 28.2 80 27.6L76.5 29.3Q61 29.9 46.5 32Z",
     wheels: [27, 93],
     arch: 10.5,
-    // Apoyacabezas de los asientos.
-    extra: "M41 24.5L41 19.5Q41 18 42.5 18L46 18Q47.5 18 47.5 19.5L47.5 24.5ZM55 24.5L55 19.5Q55 18 56.5 18L60 18Q61.5 18 61.5 19.5L61.5 24.5Z",
   },
   MINIVAN: {
     top: "M5 38L5 14Q5 9 10 8.5L76 8C82 8 86 10 90 14L98 21L108 23Q115 24.5 115 30L115 38",
@@ -81,7 +81,6 @@ export function BodySilhouette({ type, className, children }: { type: BodyType; 
     <svg viewBox="0 0 120 48" className={cn("overflow-visible", className)} aria-hidden>
       {children}
       <path d={bodyPath(s)} fill="currentColor" />
-      {s.extra && <path d={s.extra} fill="currentColor" />}
       {s.glass && <path d={s.glass} fill="var(--glass, rgba(255,255,255,0.55))" />}
       {s.wheels.map((cx) => (
         <g key={cx} className="wheel" style={{ transformOrigin: `${cx}px ${SILL}px`, transformBox: "view-box" }}>
