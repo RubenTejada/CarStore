@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
 import type { BodyType, Drivetrain, FeatureCategory, Fuel, Transmission } from "../src/generated/prisma/enums";
-import { slugify, toDop } from "../src/lib/labels";
+import { USD_TO_DOP, slugify, toDop } from "../src/lib/labels";
 import { PROVINCES } from "../src/lib/provinces";
 
 const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }) });
@@ -490,8 +490,11 @@ async function main() {
       const classic = entry.minYear < 1990;
       const year = classic ? entry.minYear : between(entry.minYear, 2026);
       const isNew = !classic && !bySeller && year >= 2025 && rand() < 0.7;
-      const price = Math.round(between(entry.price[0], entry.price[1]) / 1000) * 1000;
-      const currency = entry.currency ?? "DOP";
+      // Los rangos del catálogo están en la moneda de la entrada (DOP por defecto). Como en el mercado
+      // dominicano, parte del inventario en pesos se publica en dólares, más a menudo cuanto más caro.
+      const raw = between(entry.price[0], entry.price[1]);
+      const currency = entry.currency ?? (rand() < (raw >= 2_500_000 ? 0.35 : 0.12) ? "USD" : "DOP");
+      const price = entry.currency || currency === "DOP" ? Math.round(raw / 1000) * 1000 : Math.round(raw / USD_TO_DOP / 500) * 500;
       const province = dealer ? dealer.province : pick(PROVINCES).name;
       const base = dealer ?? PROVINCES.find((p) => p.name === province)!;
       const jitter = dealer ? 0 : 0.03;
