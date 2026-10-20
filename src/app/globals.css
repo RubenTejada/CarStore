@@ -1,0 +1,304 @@
+@import "tailwindcss";
+
+/*
+ * Paleta: azul y rojo de la bandera dominicana sobre "concreto" claro;
+ * el asfalto (night) se usa para el hero y superficies de énfasis.
+ */
+:root {
+  --bg: #f1f3f6;
+  --surface: #ffffff;
+  --surface-2: #e7eaef;
+  --ink: #0e1b33;
+  --muted: #566176;
+  --line: #d6dbe4;
+  --brand: #0b2a5b;
+  --brand-ink: #ffffff;
+  --accent: #d0142c;
+  --accent-ink: #ffffff;
+  --sun: #f5b700;
+  --night: #0b1a36;
+  --night-2: #13254a;
+  --ok: #157f3b;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0c1322;
+    --surface: #141d30;
+    --surface-2: #1c2740;
+    --ink: #e8edf5;
+    --muted: #9aa6bd;
+    --line: #2a3752;
+    --brand: #8fb2ff;
+    --brand-ink: #0b1a36;
+    --accent: #ff3d55;
+    --accent-ink: #ffffff;
+    --night: #070e1d;
+    --night-2: #101b33;
+    --ok: #4cc27a;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-brand: var(--brand);
+  --color-brand-ink: var(--brand-ink);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-sun: var(--sun);
+  --color-night: var(--night);
+  --color-night-2: var(--night-2);
+  --color-ok: var(--ok);
+  --font-sans: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
+  --font-logo: var(--font-saira), var(--font-archivo), ui-sans-serif, sans-serif;
+}
+
+html {
+  color-scheme: light dark;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+}
+
+/* Titulares: Archivo expandido y pesado. */
+.display {
+  font-stretch: 125%;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.02;
+}
+
+.wide {
+  font-stretch: 112%;
+}
+
+:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Placa dominicana: año / identificador del vehículo. */
+.plate {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  padding: 0.1em 0.5em 0.1em 0.4em;
+  border: 1.5px solid #0e1b33;
+  border-radius: 4px;
+  background: linear-gradient(#0b2a5b 0 3px, #fff 3px calc(100% - 3px), #d0142c calc(100% - 3px));
+  color: #0e1b33;
+  font-stretch: 125%;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  line-height: 1.5;
+}
+
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/*
+ * Escenario del selector de tipo: en reposo el fondo está vacío; al pasar el mouse
+ * (o al seleccionar) entran desde la derecha elementos sueltos que pasan detrás del carro.
+ * Cada elemento tiene su velocidad (paralaje) y su retraso de entrada.
+ */
+@keyframes scene-pass {
+  from {
+    left: 100%;
+  }
+  to {
+    left: calc(-1 * var(--w));
+  }
+}
+@keyframes scene-scroll {
+  to {
+    background-position-x: -32px;
+  }
+}
+@keyframes wheel-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes car-bob {
+  to {
+    transform: translateY(-1px);
+  }
+}
+@keyframes drive-off {
+  25% {
+    transform: translateX(-6px);
+  }
+  100% {
+    transform: translateX(190px);
+  }
+}
+.scene-item {
+  position: absolute;
+  left: 100%;
+  width: var(--w);
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+.scene-palm {
+  --w: 26px;
+  --speed: 1.7s;
+  --delay: 0s;
+  bottom: 5px;
+  height: 40px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='26' height='40' viewBox='0 0 26 40'><g fill='none' stroke='rgba(255,255,255,0.38)' stroke-linecap='round'><path d='M14 40Q16 28 12 14' stroke-width='2.4'/><path d='M12 14Q5 10 1 15M12 14Q19 9 25 13M12 14Q7 6 2 6M12 14Q17 6 23 7M12 14Q12 8 10 2' stroke-width='2'/></g></svg>");
+}
+.scene-palm-2 {
+  --w: 20px;
+  --delay: 0.85s;
+  height: 31px;
+  opacity: 0.75;
+}
+.scene-hill {
+  --w: 84px;
+  --speed: 3.4s;
+  --delay: 0.15s;
+  bottom: 5px;
+  height: 28px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='84' height='28' viewBox='0 0 84 28'><path d='M0 28Q20 6 42 13Q60 0 84 28Z' fill='rgba(255,255,255,0.1)'/></svg>");
+}
+.scene-cloud {
+  --w: 32px;
+  --speed: 4.2s;
+  --delay: 0.4s;
+  top: 6px;
+  height: 13px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='13' viewBox='0 0 32 13'><g fill='rgba(255,255,255,0.16)'><circle cx='8' cy='8.5' r='4.5'/><circle cx='16' cy='6.5' r='6.5'/><circle cx='24.5' cy='8.5' r='4.5'/><rect x='8' y='8.5' width='16.5' height='4.5'/></g></svg>");
+}
+.scene-road {
+  position: absolute;
+  inset: auto 0 0;
+  height: 6px;
+  opacity: 0;
+  transition: opacity 0.25s;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.2)),
+    repeating-linear-gradient(90deg, rgba(245, 183, 0, 0.55) 0 14px, transparent 14px 32px);
+  background-size:
+    100% 1px,
+    32px 2px;
+  background-position:
+    0 0,
+    0 100%;
+  background-repeat: repeat-x;
+}
+.group:hover .scene-item,
+.group:focus-visible .scene-item,
+[data-driving] .scene-item {
+  animation: scene-pass var(--speed) linear var(--delay) infinite backwards;
+}
+[data-driving] .scene-item {
+  animation-duration: calc(var(--speed) * 0.5);
+}
+.group:hover .scene-road,
+.group:focus-visible .scene-road,
+[data-driving] .scene-road {
+  opacity: 1;
+  animation: scene-scroll 0.45s linear infinite;
+}
+.group:hover .scene-car .wheel,
+.group:focus-visible .scene-car .wheel,
+[data-driving] .scene-car .wheel {
+  animation: wheel-spin 0.45s linear infinite;
+}
+.group:hover .scene-car,
+.group:focus-visible .scene-car {
+  animation: car-bob 0.3s ease-in-out infinite alternate;
+}
+[data-driving] .scene-car {
+  animation: drive-off 0.55s cubic-bezier(0.5, 0, 0.75, 0) forwards;
+}
+
+/*
+ * Logo: al cargar, el bloque TC entra derrapando desde la izquierda; las líneas de velocidad
+ * se estiran detrás y el nombre aparece. Al pasar el mouse el bloque acelera y las líneas se alargan.
+ * La entrada usa `backwards` (no `forwards`) para que al terminar manden las transiciones del hover.
+ */
+@keyframes logo-block-in {
+  0% {
+    opacity: 0;
+    transform: translateX(-45%);
+  }
+  65% {
+    opacity: 1;
+    transform: translateX(6%);
+  }
+  100% {
+    transform: none;
+  }
+}
+@keyframes logo-line-in {
+  from {
+    opacity: 0;
+    transform: scaleX(0);
+  }
+}
+@keyframes logo-word-in {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+}
+.logo .logo-line {
+  transform-box: fill-box;
+  transform-origin: right center;
+  transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) calc(var(--i) * 45ms);
+}
+.logo .logo-block {
+  transform-box: fill-box;
+  transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.logo:hover .logo-line,
+.logo:focus-visible .logo-line {
+  transform: translateX(-18%) scaleX(1.35);
+}
+.logo:hover .logo-block,
+.logo:focus-visible .logo-block {
+  transform: translateX(5%);
+}
+.logo-intro .logo-block {
+  animation: logo-block-in 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.1s backwards;
+}
+.logo-intro .logo-line {
+  animation: logo-line-in 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) calc(0.45s + var(--i) * 80ms) backwards;
+}
+.logo-intro .logo-word {
+  animation: logo-word-in 0.45s ease-out 0.4s backwards;
+}
+.logo-intro .logo-tag {
+  animation: logo-word-in 0.45s ease-out 0.55s backwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .logo-intro *,
+  .scene-item,
+  .scene-road,
+  .scene-car,
+  .scene-car .wheel {
+    animation: none !important;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

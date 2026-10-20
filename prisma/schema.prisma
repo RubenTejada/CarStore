@@ -1,0 +1,289 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  DEALER
+  SELLER
+}
+
+enum DealerStatus {
+  PENDING
+  APPROVED
+  SUSPENDED
+}
+
+enum BodyType {
+  SEDAN
+  JEEPETA
+  PICKUP
+  HATCHBACK
+  COUPE
+  CONVERTIBLE
+  MINIVAN
+  VAN
+}
+
+enum Condition {
+  NEW
+  USED
+}
+
+enum Currency {
+  DOP
+  USD
+}
+
+enum Transmission {
+  AUTOMATIC
+  MANUAL
+  CVT
+}
+
+enum Fuel {
+  GASOLINE
+  DIESEL
+  HYBRID
+  ELECTRIC
+  GLP
+}
+
+enum Drivetrain {
+  FWD
+  RWD
+  AWD
+  FOUR_WD
+}
+
+enum VehicleStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  SOLD
+}
+
+enum FeatureCategory {
+  SEGURIDAD
+  CONFORT
+  TECNOLOGIA
+  EXTERIOR
+}
+
+enum SubscriptionStatus {
+  PENDING
+  ACTIVE
+  EXPIRED
+  REJECTED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  phone        String?
+  role         Role     @default(SELLER)
+  active       Boolean  @default(true)
+  dealerId     String?
+  dealer       Dealer?  @relation(fields: [dealerId], references: [id], onDelete: SetNull)
+  createdAt    DateTime @default(now())
+
+  sessions      Session[]
+  vehicles      Vehicle[]
+  subscriptions Subscription[] @relation("SubscriptionUser")
+  approvals     Subscription[] @relation("SubscriptionApprover")
+
+  @@index([dealerId])
+}
+
+model Session {
+  id        String   @id // SHA-256 of the cookie token
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Dealer {
+  id          String       @id @default(cuid())
+  slug        String       @unique
+  name        String
+  logoUrl     String?
+  coverUrl    String?
+  description String?
+  phone       String?
+  whatsapp    String?
+  email       String?
+  website     String?
+  hours       String?
+  address     String?
+  province    String
+  lat         Float
+  lng         Float
+  status      DealerStatus @default(PENDING)
+  verified    Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+
+  users         User[]
+  vehicles      Vehicle[]
+  subscriptions Subscription[]
+
+  @@index([status])
+}
+
+model Brand {
+  id       String  @id @default(cuid())
+  slug     String  @unique
+  name     String
+  iconSlug String? // simple-icons slug
+  color    String? // hex sin '#'
+  models   Model[]
+}
+
+model Model {
+  id       String    @id @default(cuid())
+  slug     String
+  name     String
+  bodyType BodyType
+  brandId  String
+  brand    Brand     @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  trims    Trim[]
+  vehicles Vehicle[]
+
+  @@unique([brandId, slug])
+}
+
+// Versión de catálogo de un modelo (Kia Sorento → LX, EX, SX…).
+model Trim {
+  id       String    @id @default(cuid())
+  slug     String
+  name     String
+  modelId  String
+  model    Model     @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  vehicles Vehicle[]
+
+  @@unique([modelId, slug])
+}
+
+model Vehicle {
+  id            String        @id @default(cuid())
+  ownerId       String
+  owner         User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  dealerId      String?
+  dealer        Dealer?       @relation(fields: [dealerId], references: [id], onDelete: Cascade)
+  modelId       String
+  model         Model         @relation(fields: [modelId], references: [id])
+  bodyType      BodyType
+  year          Int
+  // `trim` es siempre el texto que se muestra; `trimId` lo enlaza al catálogo cuando la versión existe ahí.
+  trim          String?
+  trimId        String?
+  catalogTrim   Trim?         @relation(fields: [trimId], references: [id], onDelete: SetNull)
+  condition     Condition
+  price         Int
+  currency      Currency      @default(DOP)
+  priceDop      Int // precio normalizado a DOP para filtrar y ordenar
+  mileageKm     Int           @default(0)
+  transmission  Transmission
+  fuel          Fuel
+  drivetrain    Drivetrain
+  engine        String?
+  extColor      String?
+  intColor      String?
+  doors         Int?
+  seats         Int?
+  description   String?
+  province      String
+  lat           Float
+  lng           Float
+  status        VehicleStatus @default(DRAFT)
+  featuredUntil DateTime?
+  views         Int           @default(0)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  photos   VehiclePhoto[]
+  features VehicleFeature[]
+
+  @@index([status, bodyType])
+  @@index([status, priceDop])
+  // Buscador principal: marca/modelo + publicado (también sirve a la FK de modelId).
+  @@index([modelId, status])
+  @@index([trimId])
+  @@index([dealerId])
+  @@index([ownerId])
+  @@index([lat, lng])
+}
+
+model VehiclePhoto {
+  id        String  @id @default(cuid())
+  vehicleId String
+  vehicle   Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  url       String
+  position  Int     @default(0)
+
+  @@index([vehicleId, position])
+}
+
+model Feature {
+  id       String           @id @default(cuid())
+  slug     String           @unique
+  name     String
+  category FeatureCategory
+  icon     String // clave en src/lib/feature-icons.tsx
+  vehicles VehicleFeature[]
+}
+
+model VehicleFeature {
+  vehicleId String
+  vehicle   Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  featureId String
+  feature   Feature @relation(fields: [featureId], references: [id], onDelete: Cascade)
+
+  @@id([vehicleId, featureId])
+  // "Vehículos que tienen la característica X" sin tocar la tabla (index-only).
+  @@index([featureId, vehicleId])
+}
+
+model Plan {
+  id                String         @id @default(cuid())
+  name              String
+  description       String?
+  priceDop          Int
+  maxActiveListings Int
+  featuredSlots     Int
+  durationDays      Int
+  forDealers        Boolean        @default(false)
+  active            Boolean        @default(true)
+  subscriptions     Subscription[]
+}
+
+// Una suscripción pertenece a un dealer (cupo compartido por sus usuarios)
+// o a un vendedor particular (userId sin dealerId).
+model Subscription {
+  id           String             @id @default(cuid())
+  planId       String
+  plan         Plan               @relation(fields: [planId], references: [id])
+  userId       String
+  user         User               @relation("SubscriptionUser", fields: [userId], references: [id], onDelete: Cascade)
+  dealerId     String?
+  dealer       Dealer?            @relation(fields: [dealerId], references: [id], onDelete: Cascade)
+  status       SubscriptionStatus @default(PENDING)
+  paymentRef   String?
+  startsAt     DateTime?
+  endsAt       DateTime?
+  approvedById String?
+  approvedBy   User?              @relation("SubscriptionApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  createdAt    DateTime           @default(now())
+
+  @@index([dealerId, status])
+  @@index([userId, status])
+}
