@@ -74,7 +74,11 @@ export function VehicleFinder({ brands }: { brands: FinderBrand[] }) {
   const brandsForType = useMemo(
     () =>
       brands
-        .map((b) => ({ brand: b, count: b.models.reduce((a, m) => a + count(m.stock, filter), 0) }))
+        .map((b) => {
+          const counts = b.models.map((m) => count(m.stock, filter));
+          const available = b.models.filter((_, i) => counts[i] > 0);
+          return { brand: b, count: counts.reduce((a, n) => a + n, 0), onlyModel: available.length === 1 ? available[0] : null };
+        })
         .filter((b) => b.count > 0)
         .sort((a, b) => b.count - a.count),
     [brands, filter],
@@ -225,7 +229,7 @@ export function VehicleFinder({ brands }: { brands: FinderBrand[] }) {
                 </Link>
               </div>
               <ul className={brandGrid}>
-                {brandsForType.map(({ brand: b, count }, i) => (
+                {brandsForType.map(({ brand: b, count, onlyModel }, i) => (
                   <motion.li
                     key={b.slug}
                     className={brandCell}
@@ -233,9 +237,16 @@ export function VehicleFinder({ brands }: { brands: FinderBrand[] }) {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ type: "spring", stiffness: 260, damping: 18, delay: i * 0.035 }}
                   >
-                    <button type="button" onClick={() => setBrand(b)} className={cn("relative", brandTile)}>
-                      <BrandTileBody brand={b} count={count} lively />
-                    </button>
+                    {/* Con un solo modelo no hay nada que elegir: directo a los resultados. */}
+                    {onlyModel ? (
+                      <Link href={href({ marca: b.slug, modelo: onlyModel.slug })} className={cn("relative", brandTile)}>
+                        <BrandTileBody brand={b} count={count} lively />
+                      </Link>
+                    ) : (
+                      <button type="button" onClick={() => setBrand(b)} className={cn("relative", brandTile)}>
+                        <BrandTileBody brand={b} count={count} lively />
+                      </button>
+                    )}
                   </motion.li>
                 ))}
               </ul>

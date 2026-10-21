@@ -25,6 +25,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { canEditVehicle } from "@/lib/listing-rules";
 import { vehicleCardSelect } from "@/lib/search";
 import { getUsdRate } from "@/lib/exchange-rate";
+import { getFinancingData } from "@/lib/financing";
 import {
   BODY_TYPE_LABEL,
   CONDITION_LABEL,
@@ -46,6 +47,7 @@ import { MapView } from "@/components/map/map-view";
 import { DealerBadge } from "@/components/dealer/dealer-badge";
 import { BodySilhouette } from "@/components/browse/body-silhouette";
 import { CompareToggle } from "@/components/compare/compare-toggle";
+import { LoanCalculator } from "@/components/financing/loan-calculator";
 import { button } from "@/components/ui/styles";
 import { cn } from "@/lib/cn";
 import type { FeatureCategory } from "@/generated/prisma/enums";
@@ -73,7 +75,7 @@ export default async function VehiclePage({ params }: PageProps<"/vehiculos/[id]
   const { id, slug } = await params;
   const v = await getVehicle(id);
   if (!v) notFound();
-  const [user, usd] = await Promise.all([getCurrentUser(), getUsdRate()]);
+  const [user, usd, financing] = await Promise.all([getCurrentUser(), getUsdRate(), getFinancingData()]);
   const isOwner = !!user && canEditVehicle(user, v);
   if (v.status !== "ACTIVE" && !isOwner) notFound();
   const canonical = vehicleUrl(v);
@@ -106,6 +108,7 @@ export default async function VehiclePage({ params }: PageProps<"/vehiculos/[id]
     [Users, "Pasajeros", v.seats ? String(v.seats) : null],
   ];
 
+  const priceDop = toDop(v.price, v.currency, usd.rate);
   const address = v.dealer?.address ?? v.province;
   const routes = directionsUrls(v.lat, v.lng);
   const routeLinks: [SimpleIcon, string, string][] = [
@@ -281,6 +284,23 @@ export default async function VehiclePage({ params }: PageProps<"/vehiculos/[id]
               <p className="mt-4 max-w-prose leading-relaxed whitespace-pre-line text-ink/85">{v.description}</p>
             </section>
           )}
+
+        <section>
+          <h2 className="display text-2xl">Financiamiento</h2>
+          <p className="mt-1 text-muted">
+            Cuota estimada sobre {formatPrice(priceDop, "DOP")} con las tasas que publican las entidades financieras.
+          </p>
+          <div className="mt-5">
+            <LoanCalculator
+              vehicle
+              limit={3}
+              offers={financing.offers}
+              price={priceDop}
+              condition={v.condition}
+              moreHref={`/financiamiento?precio=${priceDop}&condicion=${v.condition === "NEW" ? "nuevo" : "usado"}`}
+            />
+          </div>
+        </section>
 
         <section>
           <h2 className="display text-2xl">Ubicación</h2>

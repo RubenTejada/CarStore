@@ -297,3 +297,19 @@ model ExchangeRate {
   publishedOn DateTime @db.Date
   createdAt   DateTime @default(now())
 }
+
+// Tasa de referencia ("desde") de préstamos de vehículos que publica cada entidad financiera.
+// La escribe el trabajo diario (`scripts/update-rates.ts`) leyendo la fuente oficial de la entidad;
+// los datos de la entidad (nombre, inicial, plazo, fuente) están en `src/lib/lenders.ts`.
+model LoanRate {
+  lender        String // slug en src/lib/lenders.ts
+  condition     Condition
+  rate          Float // tasa nominal anual, en %
+  tae           Float? // tasa anual efectiva, en %, cuando la entidad la publica
+  effectiveDate DateTime? @db.Date // vigencia o última modificación impresa en el documento
+  sourceUrl     String // documento del que se leyó
+  checkedAt     DateTime // última vez que el trabajo diario la confirmó en la fuente
+  updatedAt     DateTime  @updatedAt
+
+  @@id([lender, condition])
+}

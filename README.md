@@ -60,6 +60,8 @@ src/app/admin/              administración: pagos, dealers, vehículos, usuario
 src/app/actions/            Server Actions (validación con Zod + autorización)
 src/lib/search-params.ts    filtros de búsqueda en la URL → consulta Prisma
 src/lib/listing-rules.ts    permisos de edición, cupos de plan y destacados
+src/lib/lenders.ts          entidades financieras y fuentes de sus tasas
+scripts/update-rates.ts     trabajo diario de tasas (GitHub Actions)
 src/components/map/         Google Maps, mapa esquemático y selector de ubicación
 ```
 
@@ -70,6 +72,17 @@ src/components/map/         Google Maps, mapa esquemático y selector de ubicaci
 - Los planes se pagan por transferencia: el usuario envía la referencia y un administrador confirma el pago.
 - Al vencer un plan, sus vehículos se pausan (revisión automática cada 10 minutos al navegar).
 - Las fotos se guardan en `uploads/` (disco local), convertidas a WebP.
+
+## Tasas diarias (dólar y préstamos de vehículos)
+
+El workflow `.github/workflows/daily-rates.yml` corre cada día a las 9:15 a. m. (hora de RD) y ejecuta `npm run rates:update` (`scripts/update-rates.ts`):
+
+1. Guarda la tasa del dólar del Banco Central del día y recalcula `priceDop` de los vehículos en USD (si el trabajo no corre, el portal la sigue refrescando con la primera visita del día).
+2. Para cada entidad de `src/lib/lenders.ts` con fuente (`rates`), descarga su documento oficial de tasas, Claude extrae las tasas de préstamos de vehículos y, si pasan la validación, se publican en la tabla `LoanRate` con la fecha de verificación. Si una fuente falla se conservan sus últimos valores y el workflow termina en error.
+
+Secretos del repositorio (Settings → Secrets and variables → Actions): `DATABASE_URL` (base de datos de producción, accesible desde GitHub) y `ANTHROPIC_API_KEY`. Se puede lanzar a mano desde la pestaña Actions («Run workflow»), opcionalmente solo para algunas entidades. En local: `npm run rates:update` o `npm run rates:update -- apap`.
+
+Los datos de cada entidad (contacto, inicial y plazo máximo) se mantienen a mano en `src/lib/lenders.ts`; para agregar una entidad automatizable basta con indicar en `rates` la URL del documento (o de la página que lo enlaza, con `link`).
 
 ## Pruebas
 

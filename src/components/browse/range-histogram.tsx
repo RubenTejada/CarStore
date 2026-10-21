@@ -36,6 +36,7 @@ export function RangeHistogram({
 }) {
   const [min, setMin] = useState(value[0] ?? "");
   const [max, setMax] = useState(value[1] ?? "");
+  const [hover, setHover] = useState<number | null>(null);
   const hidden = (
     <>
       <input type="hidden" name={minName} value={min} />
@@ -53,7 +54,7 @@ export function RangeHistogram({
     );
   }
 
-  const { start, step, counts } = histogram;
+  const { start, step, counts, openStart, openEnd } = histogram;
   const n = counts.length;
   const adjust = discrete ? 1 : 0;
   const at = (edge: number) => start + edge * step;
@@ -70,6 +71,24 @@ export function RangeHistogram({
   const commit = () => {
     if (min !== (value[0] ?? "") || max !== (value[1] ?? "")) onCommit();
   };
+  /** Qué representa la barra `i`: su tramo (o año) y cuántos vehículos hay. */
+  const describe = (i: number) => {
+    const from = format(at(i));
+    const range =
+      i === n - 1 && openEnd
+        ? `${from} o más`
+        : i === 0 && openStart
+          ? discrete
+            ? `${from} o antes`
+            : `Hasta ${format(at(1))}`
+          : discrete
+            ? from
+            : `${from} – ${format(at(i + 1))}`;
+    const c = counts[i];
+    return { range, count: c === 0 ? "Sin vehículos" : c === 1 ? "1 vehículo" : `${c.toLocaleString("es-DO")} vehículos` };
+  };
+  const tip = hover === null ? null : { at: (hover + 0.5) / n, ...describe(hover) };
+
   const thumbProps = { min: 0, max: n, step: 1, onPointerUp: commit, onKeyUp: commit, className: "dual-range" } as const;
 
   return (
@@ -81,14 +100,28 @@ export function RangeHistogram({
       </p>
 
       {/* Las barras van con el mismo margen que el radio de la manija, para que cada borde coincida con su posición. */}
-      <div className="flex h-16 items-end gap-px px-2.5" aria-hidden>
-        {counts.map((c, i) => (
-          <div
-            key={i}
-            className={cn("flex-1 rounded-t-sm transition-colors", i >= a && i < b ? "bg-brand/35" : "bg-surface-2")}
-            style={{ height: c ? `max(3px, ${(c / peak) * 100}%)` : 0 }}
-          />
-        ))}
+      {/* Cada columna ocupa todo el alto para que las barras bajas también respondan al hover. */}
+      <div className="px-2.5" aria-hidden onPointerLeave={() => setHover(null)}>
+        <div className="relative flex h-16 items-end gap-px">
+          {counts.map((c, i) => (
+            <div key={i} className="flex h-full flex-1 items-end" onPointerEnter={() => setHover(i)}>
+              <div
+                className={cn("w-full rounded-t-sm transition-colors", i === hover ? "bg-brand" : i >= a && i < b ? "bg-brand/35" : "bg-surface-2")}
+                style={{ height: c ? `max(3px, ${(c / peak) * 100}%)` : 0 }}
+              />
+            </div>
+          ))}
+          {tip && (
+            // El ancla se desliza con la barra para que el globo nunca se salga del panel.
+            <div
+              className="pointer-events-none absolute bottom-full z-10 mb-2 rounded-md bg-ink px-2.5 py-1.5 text-xs whitespace-nowrap text-bg shadow-lg"
+              style={{ left: `${tip.at * 100}%`, transform: `translateX(-${tip.at * 100}%)` }}
+            >
+              <span className="block font-bold tabular-nums">{tip.range}</span>
+              <span className="block opacity-80">{tip.count}</span>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="relative h-5">

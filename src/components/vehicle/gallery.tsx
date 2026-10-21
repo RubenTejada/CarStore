@@ -8,7 +8,7 @@ import { cn } from "@/lib/cn";
 
 /**
  * Galería con miniaturas, gesto de deslizar y visor a pantalla completa.
- * `compact` quita las miniaturas (columnas del comparador); `autoplay` rota las fotos cada N ms
+ * `compact` muestra un carrusel de tres miniaturas (columnas del comparador); `autoplay` rota las fotos cada N ms
  * mientras nadie la está usando. `children` se pinta encima de la foto (placas, botones).
  */
 export function Gallery({
@@ -31,6 +31,7 @@ export function Gallery({
   const [paused, setPaused] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const touchX = useRef<number | null>(null);
+  const thumbsRef = useRef<HTMLUListElement>(null);
   const n = photos.length;
   const go = useCallback((d: number) => setIndex((i) => (i + d + n) % n), [n]);
 
@@ -47,6 +48,15 @@ export function Gallery({
     const t = setTimeout(() => go(1), autoplay);
     return () => clearTimeout(t);
   }, [autoplay, n, paused, open, index, go]);
+
+  // Mantiene visible la miniatura activa moviendo solo la tira, no la página.
+  useEffect(() => {
+    const strip = thumbsRef.current;
+    const thumb = strip?.children[index] as HTMLElement | undefined;
+    if (!strip || !thumb) return;
+    const left = thumb.offsetLeft;
+    if (left < strip.scrollLeft || left + thumb.offsetWidth > strip.scrollLeft + strip.clientWidth) strip.scrollTo({ left, behavior: "smooth" });
+  }, [index]);
 
   useEffect(() => {
     if (!open) return;
@@ -111,18 +121,26 @@ export function Gallery({
         {children}
       </div>
 
-      {n > 1 && !compact && (
-        <ul className="scrollbar-none mt-3 flex gap-2 overflow-x-auto" aria-label="Miniaturas">
+      {n > 1 && (
+        <ul
+          ref={thumbsRef}
+          className={cn("scrollbar-none relative flex gap-2 overflow-x-auto", compact ? "mt-2 snap-x snap-mandatory overscroll-x-contain" : "mt-3")}
+          aria-label="Miniaturas"
+        >
           {photos.map((p, i) => (
-            <li key={p + i} className="shrink-0">
+            <li key={p + i} className={cn("shrink-0", compact && "basis-[calc((100%-1rem)/3)] snap-start")}>
               <button
                 type="button"
                 onClick={() => setIndex(i)}
                 aria-label={`Ver foto ${i + 1}`}
                 aria-current={i === index}
-                className={cn("relative block h-16 w-24 overflow-hidden rounded-lg border-2 transition-opacity", i === index ? "border-accent" : "border-transparent opacity-70 hover:opacity-100")}
+                className={cn(
+                  "relative block overflow-hidden border-2 transition-opacity",
+                  compact ? "aspect-[3/2] w-full rounded-md" : "h-16 w-24 rounded-lg",
+                  i === index ? "border-accent" : "border-transparent opacity-70 hover:opacity-100",
+                )}
               >
-                <Image src={p} alt="" fill sizes="96px" className="object-cover" />
+                <Image src={p} alt="" fill sizes={compact ? "120px" : "96px"} className="object-cover" />
               </button>
             </li>
           ))}

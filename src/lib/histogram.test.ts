@@ -17,6 +17,7 @@ describe("priceHistogram", () => {
     const h = priceHistogram(values)!;
     expect(h.start + h.counts.length * h.step).toBeLessThan(3_000_000);
     expect(h.counts.at(-1)).toBeGreaterThanOrEqual(1);
+    expect(h.openEnd).toBe(true);
     expect(total(h.counts)).toBe(100);
   });
 
@@ -32,7 +33,7 @@ describe("yearHistogram", () => {
       { value: 2018, count: 2 },
       { value: 2020, count: 1 },
     ])!;
-    expect(h).toEqual({ start: 2018, step: 1, counts: [2, 0, 1] });
+    expect(h).toEqual({ start: 2018, step: 1, counts: [2, 0, 1], openStart: false, openEnd: false });
   });
 
   it("lumps old years into the first bar", () => {
@@ -42,6 +43,7 @@ describe("yearHistogram", () => {
     ], 10)!;
     expect(h.start).toBe(2015);
     expect(h.counts[0]).toBe(1);
+    expect(h.openStart).toBe(true);
     expect(h.counts.length).toBe(10);
   });
 });

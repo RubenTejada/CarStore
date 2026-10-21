@@ -1,0 +1,41 @@
+name: Tasas diarias
+
+# Tasa del dólar del Banco Central y tasas de préstamos de vehículos de las entidades
+# financieras (scripts/update-rates.ts). Los cambios se publican directamente en la base de datos.
+#
+# Secretos del repositorio (Settings → Secrets and variables → Actions):
+#   DATABASE_URL       base de datos de producción, accesible desde GitHub
+#   ANTHROPIC_API_KEY  clave de la API de Claude, para leer los documentos de tasas
+
+on:
+  schedule:
+    # 9:15 a. m. en Santo Domingo (UTC-4): el BCRD ya publicó la tasa del día.
+    - cron: "15 13 * * *"
+  workflow_dispatch:
+    inputs:
+      lenders:
+        description: "Solo estas entidades (slugs separados por espacio). Vacío: todo."
+        required: false
+
+concurrency:
+  group: daily-rates
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Actualizar tasas
+        # Por variable de entorno, no interpolado en el comando: el texto del formulario no se ejecuta.
+        run: npm run rates:update -- $LENDERS
+        env:
+          LENDERS: ${{ inputs.lenders }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}

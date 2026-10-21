@@ -1,20 +1,26 @@
 /**
  * Histograma de barras iguales para los filtros de rango (precio, año).
  * La barra `i` cubre [start + i·step, start + (i+1)·step); los valores fuera
- * de rango se acumulan en la primera o la última barra (de ahí el "+").
+ * de rango se acumulan en la primera o la última barra (de ahí el "+");
+ * `openStart`/`openEnd` dicen si esas barras incluyen valores de afuera.
  */
-export type Histogram = { start: number; step: number; counts: number[] };
+export type Histogram = { start: number; step: number; counts: number[]; openStart: boolean; openEnd: boolean };
 
 /** Valores con su frecuencia, tal como salen de un `groupBy`. */
 export type Weighted = { value: number; count: number }[];
 
 function bucket(values: Weighted, start: number, step: number, bins: number): Histogram {
   const counts = Array<number>(bins).fill(0);
+  const end = start + bins * step;
+  let openStart = false;
+  let openEnd = false;
   for (const { value, count } of values) {
     const i = Math.min(bins - 1, Math.max(0, Math.floor((value - start) / step)));
     counts[i] += count;
+    openStart ||= value < start;
+    openEnd ||= value >= end;
   }
-  return { start, step, counts };
+  return { start, step, counts, openStart, openEnd };
 }
 
 /** Valor bajo el cual queda la fracción `p` de los vehículos. */

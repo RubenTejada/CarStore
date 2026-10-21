@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BadgeCheck, Calendar, Check, Cog, DoorOpen, Fuel, Gauge, MapPin, Minus, Palette, Plus, Route, Scale, Store, Tag, Users, Wrench, X, type LucideIcon } from "lucide-react";
+import { ArrowRight, BadgeCheck, Calendar, Check, Cog, DoorOpen, Fuel, Gauge, MapPin, Minus, Palette, Plus, Route, Scale, Store, Tag, Users, Wrench, X, type LucideIcon } from "lucide-react";
 import { db } from "@/lib/db";
 import { getUsdRate } from "@/lib/exchange-rate";
 import { MAX_COMPARE, bestIndices, compareUrl, parseCompareIds, type CompareItem } from "@/lib/compare";
@@ -171,6 +171,10 @@ export default async function ComparePage({ searchParams }: PageProps<"/comparar
                     {v.trim && <span className="block text-sm font-normal text-muted">{v.trim}</span>}
                   </Link>
                   <p className="mt-1 text-lg font-extrabold tracking-tight text-brand">{formatPrice(v.price, v.currency)}</p>
+                  <Link href={vehicleUrl(v)} className={cn(button("outline", "sm"), "mt-3 w-full")}>
+                    Ver vehículo
+                    <ArrowRight className="size-4" aria-hidden />
+                  </Link>
                 </th>
               ))}
               {canAdd && (

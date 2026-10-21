@@ -10,6 +10,7 @@ const NAV = [
   { href: "/vehiculos?condicion=nuevo", label: "Nuevos" },
   { href: "/dealers", label: "Dealers" },
   { href: "/mapa", label: "Mapa" },
+  { href: "/financiamiento", label: "Financiamiento" },
   { href: "/planes", label: "Planes" },
 ];
 
@@ -20,7 +21,7 @@ export async function SiteHeader() {
     <header className="sticky top-0 z-40 border-b border-line bg-surface/90 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:gap-6 sm:px-6">
         <Logo intro />
-        <nav className="hidden items-center gap-1 md:flex" aria-label="Principal">
+        <nav className="hidden items-center gap-1 lg:flex" aria-label="Principal">
           {NAV.map((n) => (
             <Link key={n.href} href={n.href} className="rounded-lg px-3 py-2 text-[15px] font-medium text-muted transition-colors hover:text-ink">
               {n.label}
@@ -36,7 +37,7 @@ export async function SiteHeader() {
             <Plus className="size-4" aria-hidden />
             <span className="max-[380px]:sr-only">Publicar</span>
           </Link>
-          <details className="relative md:hidden">
+          <details className="relative lg:hidden">
             <summary className={cn(button("ghost", "sm"), "list-none [&::-webkit-details-marker]:hidden")} aria-label="Abrir menú">
               <Menu className="size-5" aria-hidden />
             </summary>
