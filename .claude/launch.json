@@ -4,22 +4,8 @@
     {
       "name": "carstore",
       "runtimeExecutable": "npm",
-      "runtimeArgs": [
-        "run",
-        "dev"
-      ],
+      "runtimeArgs": ["run", "dev"],
       "port": 3000
-    },
-    {
-      "name": "carstore-prod-3010",
-      "runtimeExecutable": "npx",
-      "runtimeArgs": [
-        "next",
-        "start",
-        "-p",
-        "3010"
-      ],
-      "port": 3010
     }
   ]
 }

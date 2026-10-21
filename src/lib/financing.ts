@@ -1,12 +1,13 @@
 import "server-only";
 import { db } from "@/lib/db";
-import { LENDERS, LENDER_KIND_LABEL } from "@/lib/lenders";
+import { LENDERS, LENDER_KIND_LABEL, type Lender } from "@/lib/lenders";
 import type { Condition } from "@/generated/prisma/enums";
 
 /** Tasa publicada por una entidad para una condición, lista para la calculadora (serializable). */
 export type LoanOffer = {
   lender: string;
   name: string;
+  logo: string;
   kind: string;
   loanUrl: string;
   phone: string | null;
@@ -21,7 +22,17 @@ export type LoanOffer = {
   sourceUrl: string;
 };
 
-export type LenderContact = { slug: string; name: string; kind: string; loanUrl: string; phone: string | null };
+export type LenderContact = { slug: string; name: string; logo: string; kind: string; loanUrl: string; phone: string | null; terms: string | null; pending: boolean };
+
+/** "Nuevos: financia hasta 90 %, 72 meses · Usados: …", o `null` si la entidad no publica condiciones. */
+function termsSummary(lender: Lender) {
+  const parts = (["NEW", "USED"] as const).flatMap((c) => {
+    const t = lender.terms?.[c];
+    const items = [t?.maxFinancingPct && `hasta ${t.maxFinancingPct} %`, t?.maxTermMonths && `${t.maxTermMonths} meses`].filter(Boolean);
+    return items.length ? `${c === "NEW" ? "Nuevos" : "Usados"}: financia ${items.join(", ")}` : [];
+  });
+  return parts.length ? parts.join(" · ") : null;
+}
 
 const dateOnly = new Intl.DateTimeFormat("es-DO", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 const rdDate = new Intl.DateTimeFormat("es-DO", { day: "numeric", month: "short", year: "numeric", timeZone: "America/Santo_Domingo" });
@@ -36,6 +47,7 @@ export async function getFinancingData() {
     return {
       lender: lender.slug,
       name: lender.name,
+      logo: lender.logo,
       kind: LENDER_KIND_LABEL[lender.kind],
       loanUrl: lender.loanUrl,
       phone: lender.phone ?? null,
@@ -53,9 +65,13 @@ export async function getFinancingData() {
   const others: LenderContact[] = LENDERS.filter((l) => !withRates.has(l.slug)).map((l) => ({
     slug: l.slug,
     name: l.name,
+    logo: l.logo,
     kind: LENDER_KIND_LABEL[l.kind],
     loanUrl: l.loanUrl,
     phone: l.phone ?? null,
+    terms: termsSummary(l),
+    // Tiene fuente pero el trabajo diario aún no ha publicado sus tasas (o el documento ya no las trae).
+    pending: !!l.rates,
   }));
   return { offers, others };
 }

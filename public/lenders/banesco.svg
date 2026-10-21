@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd" xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40" fill="none" version="1.1" id="svg10" sodipodi:docname="Logo Color.svg" inkscape:export-filename="icon-banesco.svg" inkscape:export-xdpi="16.623377" inkscape:export-ydpi="16.623377">
+  <g clip-path="url(#clip0_8258_9779)" id="g10">
+    <path d="m 20.379134,30.6746 c -1.0116,5.1498 -6.0665,9.3225 -11.2881705,9.3225 -5.22164,0 -8.63567695,-4.1727 -7.621236,-9.3225 1.011566,-5.1498 6.066526,-9.3225 11.2882065,-9.3225 5.2216,0 8.6356,4.1756 7.6212,9.3225 z" fill="#c90000" id="path1"></path>
+    <path d="m 20.379034,9.32251 c -1.0116,5.14979 -6.0666,9.32249 -11.2881905,9.32249 -5.22164,0 -8.63567895,-4.1727 -7.621238,-9.32249 C 2.4811735,4.17559 7.5361335,0 12.757734,0 c 5.2217,0 8.6357,4.17559 7.6213,9.32251 z" fill="#08543c" id="path2"></path>
+    <path d="m 39.259834,17.1966 c -1.0115,5.1498 -6.0665,9.3225 -11.2881,9.3225 -5.2217,0 -8.6357,-4.1755 -7.6213,-9.3225 1.0116,-5.1498 6.0666,-9.32247 11.2882,-9.32247 5.2216,0 8.6357,4.17267 7.6212,9.32247 z" fill="#143b64" id="path3"></path>
+  </g>
+  <defs id="defs10">
+    <clipPath id="clip0_8258_9779">
+      <rect width="230.85899" height="40" fill="#ffffff" id="rect10" x="0" y="0"></rect>
+    </clipPath>
+  </defs>
+</svg>

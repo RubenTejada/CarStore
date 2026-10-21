@@ -9,6 +9,7 @@ import type { LoanOffer } from "@/lib/financing";
 import type { Condition } from "@/generated/prisma/enums";
 import { input, label } from "@/components/ui/styles";
 import { cn } from "@/lib/cn";
+import { LenderLogo } from "@/components/financing/lender-logo";
 
 type Props = {
   offers: LoanOffer[];
@@ -147,16 +148,19 @@ export function LoanCalculator({ offers, price: initialPrice, condition: initial
               return (
                 <li key={o.lender} className={cn("rounded-xl border bg-surface p-4", i === 0 ? "border-brand" : "border-line")}>
                   <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
-                    <div className="min-w-0">
-                      <p className="flex flex-wrap items-center gap-2 font-bold">
-                        {o.name}
-                        {i === 0 && <span className="rounded-md bg-brand px-1.5 py-0.5 text-[11px] font-bold text-brand-ink">Menor cuota</span>}
-                      </p>
-                      <p className="text-xs text-muted">{o.kind}</p>
-                      <p className="mt-2 text-sm">
-                        Tasa desde <strong>{formatPct(o.rate)}</strong>
-                        {o.tae !== null && <span className="text-muted"> · TAE {formatPct(o.tae)}</span>}
-                      </p>
+                    <div className="flex min-w-0 gap-3">
+                      <LenderLogo src={o.logo} />
+                      <div className="min-w-0">
+                        <p className="flex flex-wrap items-center gap-2 font-bold">
+                          {o.name}
+                          {i === 0 && <span className="rounded-md bg-brand px-1.5 py-0.5 text-[11px] font-bold text-brand-ink">Menor cuota</span>}
+                        </p>
+                        <p className="text-xs text-muted">{o.kind}</p>
+                        <p className="mt-2 text-sm">
+                          Tasa desde <strong>{formatPct(o.rate)}</strong>
+                          {o.tae !== null && <span className="text-muted"> · TAE {formatPct(o.tae)}</span>}
+                        </p>
+                      </div>
                     </div>
                     <div className="text-right">
                       <p className="text-2xl font-extrabold tracking-tight text-brand">

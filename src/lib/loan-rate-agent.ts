@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { z } from "zod";
@@ -37,6 +38,7 @@ export type RateExtraction = z.infer<typeof Extraction>;
 const PROMPT = `El documento anterior es la publicación oficial de tasas de una entidad financiera de República Dominicana.
 Extrae las tasas de los préstamos para comprar vehículos en pesos dominicanos (RD$):
 - Una entrada por condición: NEW para vehículos nuevos o 0 km; USED para usados. Si la entidad solo distingue «seminuevos», úsalos como USED.
+- Si una misma tasa o rango cubre los vehículos sin distinguir nuevos de usados, devuélvela para NEW y para USED.
 - Ignora préstamos personales, hipotecarios, con garantía de depósitos, leasing, préstamos en dólares y tasas de mora o de depósitos.
 - Copia los números tal como aparecen. No calcules ni estimes: si el documento no trae tasa de vehículos, devuelve "rates" vacío.`;
 
@@ -53,19 +55,29 @@ export async function fetchSource(source: RateSource): Promise<SourceDocument> {
   return { url: res.url, kind: isPdf ? "pdf" : "html", body };
 }
 
-async function get(url: string) {
-  const res = await fetch(url, { headers: { "user-agent": USER_AGENT }, cache: "no-store", redirect: "follow", signal: AbortSignal.timeout(45_000) });
-  if (!res.ok) throw new Error(`${url} respondió ${res.status}.`);
-  return res;
+/** GET con dos reintentos ante errores de red o 5xx (algunos sitios fallan de forma intermitente). */
+async function get(url: string, attempt = 1): Promise<Response> {
+  try {
+    const res = await fetch(url, { headers: { "user-agent": USER_AGENT }, cache: "no-store", redirect: "follow", signal: AbortSignal.timeout(45_000) });
+    if (res.status >= 500 && attempt < 3) throw new Error(`${url} respondió ${res.status}.`);
+    if (!res.ok) throw new Error(`${url} respondió ${res.status}.`);
+    return res;
+  } catch (error) {
+    if (attempt >= 3) throw error;
+    await new Promise((r) => setTimeout(r, 5_000 * attempt));
+    return get(url, attempt + 1);
+  }
 }
 
-/** Primer `href` de la página que cumple `pattern`, como URL absoluta. */
+/**
+ * URL del documento en la página: el primer texto que cumple `pattern` (su grupo 1 si lo tiene,
+ * para patrones que incluyen el contexto del enlace), como URL absoluta.
+ */
 export function findDocumentLink(html: string, pattern: RegExp, base: string) {
-  for (const [, href] of html.matchAll(/href\s*=\s*["']([^"']+)["']/gi)) {
-    const decoded = href.replaceAll("&amp;", "&");
-    if (pattern.test(decoded)) return new URL(decoded, base).href;
-  }
-  return null;
+  // Las páginas que embeben sus datos como JavaScript escriben las barras como \u002F.
+  const m = html.replaceAll("&amp;", "&").replace(/\\u002F/gi, "/").match(pattern);
+  const href = m?.[1] ?? m?.[0];
+  return href ? new URL(href, base).href : null;
 }
 
 /** Texto legible de una página: sin scripts, estilos ni etiquetas. */
@@ -128,20 +140,33 @@ export function validateExtraction(x: RateExtraction, today: string) {
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
-/** Lee la fuente de la entidad y publica sus tasas. Devuelve lo publicado. */
+/**
+ * Lee la fuente de la entidad y publica sus tasas. Si el documento es idéntico al de la última
+ * extracción solo se renueva la fecha de verificación (sin llamar a Claude). Las condiciones que
+ * el documento ya no trae se retiran: la publicación de la entidad es la fuente de verdad.
+ */
 export async function refreshLenderRates(client: Anthropic, lender: Lender & { rates: RateSource }, today: string) {
   const doc = await fetchSource(lender.rates);
-  const { rates, effectiveDate } = validateExtraction(await extractRates(client, doc), today);
+  const sourceHash = createHash("sha256").update(doc.body).digest("hex");
   const checkedAt = new Date();
-  await db.$transaction(
-    rates.map((r) => {
-      const data = { rate: r.rate, tae: r.tae, effectiveDate, sourceUrl: doc.url, checkedAt };
+  const stored = await db.loanRate.findMany({ where: { lender: lender.slug } });
+  if (stored.length && stored.every((r) => r.sourceHash === sourceHash)) {
+    await db.loanRate.updateMany({ where: { lender: lender.slug }, data: { checkedAt } });
+    const rates: ValidRate[] = stored.map((r) => ({ condition: r.condition, rate: r.rate, tae: r.tae }));
+    return { rates, effectiveDate: stored[0].effectiveDate, sourceUrl: doc.url, unchanged: true };
+  }
+
+  const { rates, effectiveDate } = validateExtraction(await extractRates(client, doc), today);
+  await db.$transaction([
+    db.loanRate.deleteMany({ where: { lender: lender.slug, condition: { notIn: rates.map((r) => r.condition) } } }),
+    ...rates.map((r) => {
+      const data = { rate: r.rate, tae: r.tae, effectiveDate, sourceUrl: doc.url, sourceHash, checkedAt };
       return db.loanRate.upsert({
         where: { lender_condition: { lender: lender.slug, condition: r.condition } },
         create: { lender: lender.slug, condition: r.condition, ...data },
         update: data,
       });
     }),
-  );
-  return { rates, effectiveDate, sourceUrl: doc.url };
+  ]);
+  return { rates, effectiveDate, sourceUrl: doc.url, unchanged: false };
 }

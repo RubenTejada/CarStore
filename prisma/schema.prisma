@@ -308,6 +308,7 @@ model LoanRate {
   tae           Float? // tasa anual efectiva, en %, cuando la entidad la publica
   effectiveDate DateTime? @db.Date // vigencia o última modificación impresa en el documento
   sourceUrl     String // documento del que se leyó
+  sourceHash    String // SHA-256 del documento: si no cambia, no se vuelve a extraer
   checkedAt     DateTime // última vez que el trabajo diario la confirmó en la fuente
   updatedAt     DateTime  @updatedAt
 

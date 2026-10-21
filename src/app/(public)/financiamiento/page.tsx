@@ -3,6 +3,7 @@ import { ExternalLink, Phone } from "lucide-react";
 import { getFinancingData, type LoanOffer } from "@/lib/financing";
 import { formatPct } from "@/lib/loan";
 import { LoanCalculator } from "@/components/financing/loan-calculator";
+import { LenderLogo } from "@/components/financing/lender-logo";
 import type { Condition } from "@/generated/prisma/enums";
 
 export const metadata: Metadata = {
@@ -59,8 +60,13 @@ export default async function FinancingPage({ searchParams }: PageProps<"/financ
                 return (
                   <tr key={any.lender}>
                     <th scope="row" className="px-4 py-3 font-normal">
-                      <span className="block font-bold">{any.name}</span>
-                      <span className="text-xs text-muted">{any.kind}</span>
+                      <span className="flex items-center gap-3">
+                        <LenderLogo src={any.logo} />
+                        <span>
+                          <span className="block font-bold">{any.name}</span>
+                          <span className="text-xs text-muted">{any.kind}</span>
+                        </span>
+                      </span>
                     </th>
                     {(["NEW", "USED"] as const).map((c) => (
                       <td key={c} className="px-4 py-3">
@@ -80,11 +86,17 @@ export default async function FinancingPage({ searchParams }: PageProps<"/financ
               {others.map((l) => (
                 <tr key={l.slug}>
                   <th scope="row" className="px-4 py-3 font-normal">
-                    <span className="block font-bold">{l.name}</span>
-                    <span className="text-xs text-muted">{l.kind}</span>
+                    <span className="flex items-center gap-3">
+                      <LenderLogo src={l.logo} />
+                      <span>
+                        <span className="block font-bold">{l.name}</span>
+                        <span className="text-xs text-muted">{l.kind}</span>
+                      </span>
+                    </span>
                   </th>
                   <td colSpan={3} className="px-4 py-3 text-muted">
-                    No publica sus tasas en un documento que podamos verificar: consulta directamente.
+                    {l.pending ? "Tasa pendiente de verificación." : "No publica sus tasas en un documento que podamos verificar: consulta directamente."}
+                    {l.terms && <span className="block text-xs">{l.terms}</span>}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <ContactLinks loanUrl={l.loanUrl} phone={l.phone} />

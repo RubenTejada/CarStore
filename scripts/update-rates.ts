@@ -46,9 +46,9 @@ async function main() {
   // De una en una: son pocas y así un banco lento no compite con los demás por el tiempo de espera.
   for (const lender of lenders) {
     try {
-      const { rates, effectiveDate } = await refreshLenderRates(client, lender, today);
+      const { rates, effectiveDate, unchanged } = await refreshLenderRates(client, lender, today);
       const list = rates.map((r) => `${r.condition === "NEW" ? "nuevos" : "usados"} ${formatPct(r.rate)}${r.tae === null ? "" : ` (TAE ${formatPct(r.tae)})`}`).join(", ");
-      log(`- ✅ ${lender.name}: ${list}${effectiveDate ? ` · vigente desde ${effectiveDate.toISOString().slice(0, 10)}` : ""}`);
+      log(`- ✅ ${lender.name}: ${list}${effectiveDate ? ` · vigente desde ${effectiveDate.toISOString().slice(0, 10)}` : ""}${unchanged ? " · documento sin cambios" : ""}`);
     } catch (error) {
       failures++;
       log(`- ❌ ${lender.name}: ${message(error)}`);

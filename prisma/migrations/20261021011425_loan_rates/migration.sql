@@ -6,6 +6,7 @@ CREATE TABLE "LoanRate" (
     "tae" DOUBLE PRECISION,
     "effectiveDate" DATE,
     "sourceUrl" TEXT NOT NULL,
+    "sourceHash" TEXT NOT NULL,
     "checkedAt" TIMESTAMP(3) NOT NULL,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 

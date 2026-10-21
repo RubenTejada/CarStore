@@ -7,13 +7,18 @@ describe("findDocumentLink", () => {
     <a href="/wp-content/uploads/2019/03/Tarifario-Escala-de-Tasas-Activas.pdf?v=1&amp;x=2">Tarifario</a>`;
 
   it("devuelve el primer enlace que cumple el patrón", () => {
-    expect(findDocumentLink(html, /tasas-de-referencia[^"']*\.pdf/i, "https://www.banco.do/")).toBe("https://cdn.example.com/media/abc/tasas-de-referencia_2026-6.pdf");
+    expect(findDocumentLink(html, /["'](https:\/\/[^"']*\/tasas-de-referencia[^"']*\.pdf)/i, "https://www.banco.do/")).toBe("https://cdn.example.com/media/abc/tasas-de-referencia_2026-6.pdf");
   });
 
   it("resuelve rutas relativas y entidades HTML", () => {
-    expect(findDocumentLink(html, /Tarifario-Escala-de-Tasas[^"']*\.pdf/i, "https://www.apap.com.do/acerca-apap/tasas-de-interes/")).toBe(
+    expect(findDocumentLink(html, /["']([^"']*Tarifario-Escala-de-Tasas[^"']*\.pdf[^"']*)/i, "https://www.apap.com.do/acerca-apap/tasas-de-interes/")).toBe(
       "https://www.apap.com.do/wp-content/uploads/2019/03/Tarifario-Escala-de-Tasas-Activas.pdf?v=1&x=2",
     );
+  });
+
+  it("encuentra URLs dentro de datos JSON de la página", () => {
+    const page = `{name:"Tasas de referencia y pago de intereses abril",description:"",file:"https:\\u002F\\u002Fblob.example.net\\u002Fa.pdf?sig=x&amp;se=1"}`;
+    expect(findDocumentLink(page, /name:"Tasas de referencia[^"]*",description:"[^"]*",file:"([^"]+)"/, "https://bsc.com.do/")).toBe("https://blob.example.net/a.pdf?sig=x&se=1");
   });
 
   it("null si no hay enlace", () => {
