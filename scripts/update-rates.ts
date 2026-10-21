@@ -10,7 +10,7 @@
  */
 import "dotenv/config";
 import { appendFileSync } from "node:fs";
-import Anthropic from "@anthropic-ai/sdk";
+import { createClaudeClient } from "@/lib/claude";
 import { db } from "@/lib/db";
 import { ensureUsdRate, rdDay } from "@/lib/usd-rate";
 import { LENDERS, type Lender, type RateSource } from "@/lib/lenders";
@@ -42,7 +42,7 @@ async function main() {
   const unknown = only.filter((slug) => !LENDERS.some((l) => l.slug === slug && l.rates));
   if (unknown.length) throw new Error(`Entidades sin fuente de tasas: ${unknown.join(", ")}`);
 
-  const client = new Anthropic();
+  const client = createClaudeClient();
   // De una en una: son pocas y así un banco lento no compite con los demás por el tiempo de espera.
   for (const lender of lenders) {
     try {

@@ -4,8 +4,10 @@ name: Tasas diarias
 # financieras (scripts/update-rates.ts). Los cambios se publican directamente en la base de datos.
 #
 # Secretos del repositorio (Settings → Secrets and variables → Actions):
-#   DATABASE_URL       base de datos de producción, accesible desde GitHub
+#   DATABASE_URL       base de datos de producción (nexconta-db-b, base carstore)
+#   AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID   para abrir el firewall de la base (ver deploy.yml)
 #   ANTHROPIC_API_KEY  clave de la API de Claude, para leer los documentos de tasas
+#   o, para usar Claude en Microsoft Foundry (Azure): ANTHROPIC_FOUNDRY_RESOURCE y ANTHROPIC_FOUNDRY_API_KEY
 
 on:
   schedule:
@@ -16,6 +18,10 @@ on:
       lenders:
         description: "Solo estas entidades (slugs separados por espacio). Vacío: todo."
         required: false
+
+permissions:
+  id-token: write
+  contents: read
 
 concurrency:
   group: daily-rates
@@ -32,6 +38,17 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      # El firewall de la base solo admite servicios de Azure: se abre a la IP de este runner.
+      - name: Abrir firewall de la base
+        run: |
+          IP=$(curl -fsS https://api.ipify.org)
+          az postgres flexible-server firewall-rule create -g nexconta --server-name nexconta-db-b \
+            -n gh-rates-${{ github.run_id }} --start-ip-address $IP --end-ip-address $IP -o none
       - name: Actualizar tasas
         # Por variable de entorno, no interpolado en el comando: el texto del formulario no se ejecuta.
         run: npm run rates:update -- $LENDERS
@@ -39,3 +56,10 @@ jobs:
           LENDERS: ${{ inputs.lenders }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_FOUNDRY_RESOURCE: ${{ secrets.ANTHROPIC_FOUNDRY_RESOURCE }}
+          ANTHROPIC_FOUNDRY_API_KEY: ${{ secrets.ANTHROPIC_FOUNDRY_API_KEY }}
+      - name: Cerrar firewall de la base
+        if: always()
+        run: |
+          az postgres flexible-server firewall-rule delete -g nexconta --server-name nexconta-db-b \
+            -n gh-rates-${{ github.run_id }} --yes -o none || true

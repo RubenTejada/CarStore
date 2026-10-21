@@ -75,6 +75,21 @@ enum FeatureCategory {
   EXTERIOR
 }
 
+enum ImportJobStatus {
+  DISCOVERING
+  RUNNING
+  DONE
+  FAILED
+}
+
+enum ImportItemStatus {
+  PENDING
+  RUNNING
+  DONE
+  SKIPPED
+  FAILED
+}
+
 enum SubscriptionStatus {
   PENDING
   ACTIVE
@@ -96,6 +111,7 @@ model User {
 
   sessions      Session[]
   vehicles      Vehicle[]
+  importJobs    ImportJob[]
   subscriptions Subscription[] @relation("SubscriptionUser")
   approvals     Subscription[] @relation("SubscriptionApprover")
 
@@ -135,6 +151,7 @@ model Dealer {
   users         User[]
   vehicles      Vehicle[]
   subscriptions Subscription[]
+  importJobs    ImportJob[]
 
   @@index([status])
 }
@@ -217,6 +234,9 @@ model Vehicle {
   spinVideo    String?
   interiorPano String?
 
+  // Anuncio de otro portal del que se importó (ver src/lib/listing-import.ts): evita importarlo dos veces.
+  sourceUrl String?
+
   photos   VehiclePhoto[]
   features VehicleFeature[]
 
@@ -228,6 +248,7 @@ model Vehicle {
   @@index([dealerId])
   @@index([ownerId])
   @@index([lat, lng])
+  @@index([sourceUrl])
 }
 
 model VehiclePhoto {
@@ -320,4 +341,39 @@ model LoanRate {
   updatedAt     DateTime  @updatedAt
 
   @@id([lender, condition])
+}
+
+// Importación del inventario de un dealer desde su página en otro portal (src/lib/inventory-import.ts).
+// Primero se recorren las páginas del listado (DISCOVERING) y se crea un item por anuncio; luego cada
+// item se importa como borrador. `updatedAt` sirve para detectar un trabajo interrumpido y reanudarlo.
+model ImportJob {
+  id        String          @id @default(cuid())
+  dealerId  String
+  dealer    Dealer          @relation(fields: [dealerId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  url       String
+  status    ImportJobStatus @default(DISCOVERING)
+  error     String?
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  items ImportJobItem[]
+
+  @@index([dealerId, createdAt])
+}
+
+model ImportJobItem {
+  id        String           @id @default(cuid())
+  jobId     String
+  job       ImportJob        @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  url       String
+  status    ImportItemStatus @default(PENDING)
+  title     String?
+  error     String?
+  vehicleId String?
+  updatedAt DateTime         @updatedAt
+
+  @@unique([jobId, url])
+  @@index([jobId, status])
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { findDocumentLink, htmlToText, validateExtraction } from "./loan-rate-agent";
+import { findDocumentLink, validateExtraction } from "./loan-rate-agent";
+import { htmlToText } from "./html";
 
 describe("findDocumentLink", () => {
   const html = `<a href="/pages/historico-de-tarifarios/">Histórico</a>

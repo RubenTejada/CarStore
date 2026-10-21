@@ -90,9 +90,23 @@ El workflow `.github/workflows/daily-rates.yml` corre cada día a las 9:15 a. m.
 1. Guarda la tasa del dólar del Banco Central del día y recalcula `priceDop` de los vehículos en USD (si el trabajo no corre, el portal la sigue refrescando con la primera visita del día).
 2. Para cada entidad de `src/lib/lenders.ts` con fuente (`rates`), descarga su documento oficial de tasas, Claude extrae las tasas de préstamos de vehículos y, si pasan la validación, se publican en la tabla `LoanRate` con la fecha de verificación. Si una fuente falla se conservan sus últimos valores y el workflow termina en error.
 
-Secretos del repositorio (Settings → Secrets and variables → Actions): `DATABASE_URL` (base de datos de producción, accesible desde GitHub) y `ANTHROPIC_API_KEY`. Se puede lanzar a mano desde la pestaña Actions («Run workflow»), opcionalmente solo para algunas entidades. En local: `npm run rates:update` o `npm run rates:update -- apap`.
+Secretos del repositorio (Settings → Secrets and variables → Actions): `DATABASE_URL` (base de datos de producción, accesible desde GitHub) y `ANTHROPIC_API_KEY` (o `ANTHROPIC_FOUNDRY_RESOURCE` + `ANTHROPIC_FOUNDRY_API_KEY` para Azure). Se puede lanzar a mano desde la pestaña Actions («Run workflow»), opcionalmente solo para algunas entidades. En local: `npm run rates:update` o `npm run rates:update -- apap`.
 
 Los datos de cada entidad (contacto, inicial y plazo máximo) se mantienen a mano en `src/lib/lenders.ts`; para agregar una entidad automatizable basta con indicar en `rates` la URL del documento (o de la página que lo enlaza, con `link`).
+
+## Importar desde otros portales
+
+En el panel, **Publicar vehículo** acepta el enlace de un anuncio en otro portal (SuperCarros, Corotos, la web de un dealer…) y llena el formulario con sus datos, características y fotos para revisarlo y publicarlo. Los dealers tienen además **Importar inventario**: con el enlace de su página en otro portal se recorre el listado (con su paginación) y cada vehículo se crea como borrador.
+
+- La página se descarga en el servidor (`src/lib/safe-fetch.ts`: solo http(s) públicos; se rechazan IPs privadas, también tras redirecciones) y Claude extrae los datos con salida estructurada contra el catálogo (`src/lib/listing-import.ts`, partes puras en `src/lib/listing-parse.ts`). Las fotos se copian a `uploads/` como WebP.
+- Marca y modelo deben existir en el catálogo; si no, el anuncio individual pide elegirlos y el inventario lo marca con error. Cada vehículo guarda su `sourceUrl`, así un anuncio no se importa dos veces.
+- El inventario corre en segundo plano en el mismo proceso (`after`, modelo `ImportJob`); si el servidor se reinicia, la página permite reanudarlo.
+- Solo se lee el HTML que entrega el servidor: los sitios que arman la página con JavaScript en el navegador (p. ej. Facebook Marketplace) no traen los datos.
+- El vendedor confirma que el anuncio es suyo: importar contenido ajeno puede infringir los términos del otro portal.
+
+### Claude: API de Anthropic o Microsoft Foundry (Azure)
+
+`src/lib/claude.ts` usa Claude en Microsoft Foundry si están `ANTHROPIC_FOUNDRY_RESOURCE` y `ANTHROPIC_FOUNDRY_API_KEY` (el despliegue debe llamarse como el modelo, `claude-opus-5-5`); si no, la API de Anthropic con `ANTHROPIC_API_KEY`. Aplica a la importación y a las tasas diarias.
 
 ## Pruebas
 
@@ -101,3 +115,11 @@ npm test         # pruebas unitarias
 npm run lint
 npm run build
 ```
+
+## Despliegue
+
+Azure App Service `carstore-web` (Node 24, plan `cityguide-plan` del grupo `cityguide-rg`, junto a QuehacerRD y HotelMagazine). Cada push a `main` ejecuta `.github/workflows/deploy.yml`: pruebas, build standalone, `prisma migrate deploy` y publicación.
+
+- Base de datos: `carstore` en el servidor PostgreSQL `nexconta-db-b` (grupo `nexconta`). Su firewall solo admite servicios de Azure; los workflows abren una regla temporal para la IP del runner y la cierran al terminar.
+- Fotos: `UPLOAD_DIR=/home/data/uploads` en la configuración de App Service; `/home` persiste entre despliegues.
+- Configuración de App Service: `DATABASE_URL`, `UPLOAD_DIR` y las claves de Claude. Las `NEXT_PUBLIC_*` se incrustan en el build, por eso van como secretos del repositorio.

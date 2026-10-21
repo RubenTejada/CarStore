@@ -4,9 +4,10 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
 
-// Almacenamiento local en disco (fase 2: S3/R2).
-export const UPLOAD_DIR = path.join(process.cwd(), "uploads");
-const MAX_BYTES = 10 * 1024 * 1024;
+// Almacenamiento local en disco (fase 2: S3/R2). En App Service, UPLOAD_DIR apunta a /home,
+// que persiste entre despliegues; la carpeta de la aplicación se reemplaza en cada uno.
+export const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(process.cwd(), "uploads");
+export const MAX_BYTES = 10 * 1024 * 1024;
 // Las cámaras 360 entregan panoramas grandes (5760×2880 o más).
 const MAX_PANO_BYTES = 30 * 1024 * 1024;
 const ALLOWED = new Set(["jpeg", "png", "webp", "heif", "avif"]);
@@ -20,7 +21,11 @@ export type UploadKind = "vehicle" | "logo" | "cover" | "pano";
 export async function saveImage(file: File, kind: UploadKind): Promise<string> {
   const maxBytes = kind === "pano" ? MAX_PANO_BYTES : MAX_BYTES;
   if (file.size > maxBytes) throw new Error(`La imagen supera ${maxBytes / 1024 / 1024} MB.`);
-  const buffer = Buffer.from(await file.arrayBuffer());
+  return saveImageBuffer(Buffer.from(await file.arrayBuffer()), kind);
+}
+
+/** Como `saveImage`, para una imagen ya descargada (las fotos importadas de otros portales). */
+export async function saveImageBuffer(buffer: Buffer, kind: UploadKind): Promise<string> {
   const meta = await sharp(buffer).metadata().catch(() => null);
   if (!meta?.format || !ALLOWED.has(meta.format)) throw new Error("Formato no permitido. Usa JPG, PNG o WebP.");
   if (kind === "pano") {

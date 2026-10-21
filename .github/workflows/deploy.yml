@@ -1,0 +1,95 @@
+name: Deploy
+
+# Publica el portal en App Service (carstore-web, plan cityguide-plan, junto a QuehacerRD y HotelMagazine).
+#
+# Secretos del repositorio (Settings → Secrets and variables → Actions):
+#   AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID   app cityguide-github-deploy (OIDC)
+#   DATABASE_URL                       base de datos de producción (nexconta-db-b, base carstore)
+#   NEXT_PUBLIC_GOOGLE_MAPS_API_KEY    se incrustan en el build, por eso van aquí y no solo
+#   NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID     en la configuración de App Service
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: deploy
+  # Una migración a medias no se cancela.
+  cancel-in-progress: false
+
+env:
+  APP_NAME: carstore-web
+  APP_RG: cityguide-rg
+  DB_SERVER: nexconta-db-b
+  DB_RG: nexconta
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm test
+
+      - run: npm run build
+        env:
+          NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${{ secrets.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY }}
+          NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID: ${{ secrets.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID }}
+
+      # Salida standalone: server.js y un node_modules mínimo; .next/static y public/ se copian
+      # aparte. server.js de Next arranca a través de deploy/server.cjs, que saca la caché de
+      # imágenes de /home (ver el comentario allí).
+      - name: Empaquetar build standalone
+        run: |
+          cp -r .next/static .next/standalone/.next/static
+          cp -r public .next/standalone/public
+          mv .next/standalone/server.js .next/standalone/next-server.js
+          cp deploy/server.cjs .next/standalone/server.js
+
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # El firewall de la base solo admite servicios de Azure: se abre a la IP de este runner
+      # mientras corren las migraciones y se cierra al terminar, aunque fallen.
+      - name: Abrir firewall de la base
+        run: |
+          IP=$(curl -fsS https://api.ipify.org)
+          az postgres flexible-server firewall-rule create -g $DB_RG --server-name $DB_SERVER \
+            -n gh-carstore-${{ github.run_id }} --start-ip-address $IP --end-ip-address $IP -o none
+
+      - name: Migraciones
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Cerrar firewall de la base
+        if: always()
+        run: |
+          az postgres flexible-server firewall-rule delete -g $DB_RG --server-name $DB_SERVER \
+            -n gh-carstore-${{ github.run_id }} --yes -o none || true
+
+      - uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.APP_NAME }}
+          package: .next/standalone
+
+      # El zip deploy deja los archivos nuevos pero no reinicia el proceso de node: sin esto
+      # el sitio sigue sirviendo el build anterior.
+      - name: Reiniciar app
+        run: az webapp restart -g $APP_RG -n $APP_NAME

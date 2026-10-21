@@ -7,7 +7,7 @@ import type { FormState } from "@/app/actions/auth";
  * Como useActionState, pero envía desde onSubmit para que React no
  * reinicie los campos del formulario cuando la acción devuelve un error.
  */
-export function useFormAction(action: (state: FormState, form: FormData) => Promise<FormState>) {
+export function useFormAction<S = FormState>(action: (state: S | undefined, form: FormData) => Promise<S | undefined>) {
   const [state, dispatch, pending] = useActionState(action, undefined);
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

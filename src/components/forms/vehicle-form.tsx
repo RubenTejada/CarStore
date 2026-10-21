@@ -48,9 +48,11 @@ export type VehicleFormValues = {
   interiorPano: string | null;
   features: string[];
   featured: boolean;
+  /** Anuncio de otro portal del que se importó (ver actions/import.ts). */
+  sourceUrl?: string;
 };
 
-type Props = {
+export type VehicleFormProps = {
   action: (state: FormState, form: FormData) => Promise<FormState>;
   values: VehicleFormValues;
   brands: { id: string; name: string; models: { id: string; name: string; bodyType: BodyType; trims: { id: string; name: string }[] }[] }[];
@@ -61,7 +63,7 @@ type Props = {
 
 const OTHER_TRIM = "otra";
 
-export function VehicleForm({ action, values, brands, features, provinces, featuredHint }: Props) {
+export function VehicleForm({ action, values, brands, features, provinces, featuredHint }: VehicleFormProps) {
   const { state, pending, onSubmit } = useFormAction(action);
   const [brandId, setBrandId] = useState(values.brandId);
   const [modelId, setModelId] = useState(values.modelId);
@@ -77,6 +79,7 @@ export function VehicleForm({ action, values, brands, features, provinces, featu
   return (
     <form onSubmit={onSubmit} className="space-y-8">
       <FormMessage state={state} />
+      {values.sourceUrl && <input type="hidden" name="sourceUrl" value={values.sourceUrl} />}
 
       <Section title="Fotos" text="Sube buenas fotos: exterior, interior, tablero y motor.">
         <PhotoUploader name="photos" defaultValue={values.photos} />

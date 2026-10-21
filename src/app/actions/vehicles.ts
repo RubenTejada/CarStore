@@ -68,6 +68,7 @@ const vehicleSchema = z.object({
   interiorPano: z.union([z.literal("").transform(() => null), photoUrl]),
   features: z.array(z.string()).max(80),
   featured: z.boolean(),
+  sourceUrl: z.union([z.literal(""), z.url({ protocol: /^https?$/ }).max(2000)]),
   intent: z.enum(["draft", "publish"]),
 });
 
@@ -85,6 +86,7 @@ export async function saveVehicle(id: string | null, _: FormState, form: FormDat
     trimId: "",
     trim: "",
     interiorPano: "",
+    sourceUrl: "",
     ...Object.fromEntries([...form.entries()].filter(([k]) => k !== "photos" && k !== "spinFrames" && k !== "features")),
     photos: form.getAll("photos"),
     spinFrames: form.getAll("spinFrames"),
@@ -154,6 +156,8 @@ export async function saveVehicle(id: string | null, _: FormState, form: FormDat
     interiorPano: d.interiorPano,
     status: activate ? VehicleStatus.ACTIVE : VehicleStatus.DRAFT,
     featuredUntil,
+    // Solo lo envía el formulario de un anuncio importado; al editar se conserva el que ya tenía.
+    ...(d.sourceUrl && { sourceUrl: d.sourceUrl }),
   };
 
   await db.$transaction(async (tx) => {

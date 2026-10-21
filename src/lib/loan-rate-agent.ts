@@ -3,6 +3,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { z } from "zod";
 import { db } from "@/lib/db";
+import { htmlToText } from "@/lib/html";
+import { CLAUDE_MODEL, refusalFallback, type ClaudeClient } from "@/lib/claude";
 import type { Lender, RateSource } from "@/lib/lenders";
 
 /**
@@ -13,7 +15,6 @@ import type { Lender, RateSource } from "@/lib/lenders";
  * lo ejecuta `scripts/update-rates.ts` desde GitHub Actions.
  */
 
-const MODEL = "claude-opus-5-5";
 // Algunos CDN de bancos rechazan clientes sin agente de navegador.
 const USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36";
 const MAX_TEXT_CHARS = 150_000;
@@ -80,20 +81,7 @@ export function findDocumentLink(html: string, pattern: RegExp, base: string) {
   return href ? new URL(href, base).href : null;
 }
 
-/** Texto legible de una página: sin scripts, estilos ni etiquetas. */
-export function htmlToText(html: string) {
-  return html
-    .replace(/<(script|style|noscript|svg)\b[\s\S]*?<\/\1>/gi, " ")
-    .replace(/<br\s*\/?>|<\/(p|div|tr|li|h\d)>/gi, "\n")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/[ \t]+/g, " ")
-    .replace(/\s*\n\s*/g, "\n")
-    .trim();
-}
-
-export async function extractRates(client: Anthropic, doc: SourceDocument): Promise<RateExtraction> {
+export async function extractRates(client: ClaudeClient, doc: SourceDocument): Promise<RateExtraction> {
   const text = doc.kind === "html" ? htmlToText(doc.body.toString("utf8")) : "";
   if (doc.kind === "html" && text.length > MAX_TEXT_CHARS) throw new Error(`La página ${doc.url} es demasiado larga (${text.length} caracteres).`);
   const document: Anthropic.Beta.BetaRequestDocumentBlock =
@@ -101,11 +89,9 @@ export async function extractRates(client: Anthropic, doc: SourceDocument): Prom
       ? { type: "document", source: { type: "base64", media_type: "application/pdf", data: doc.body.toString("base64") } }
       : { type: "document", source: { type: "text", media_type: "text/plain", data: text } };
   const msg = await client.beta.messages.parse({
-    model: MODEL,
+    model: CLAUDE_MODEL,
     max_tokens: 16_000,
-    // Si un clasificador de seguridad rechaza la petición, la API la repite con el modelo de respaldo.
-    betas: ["server-side-fallback-2026-07-01"],
-    fallbacks: "default",
+    ...refusalFallback(),
     output_config: { format: betaZodOutputFormat(Extraction) },
     messages: [{ role: "user", content: [document, { type: "text", text: PROMPT }] }],
   });
@@ -145,7 +131,7 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
  * extracción solo se renueva la fecha de verificación (sin llamar a Claude). Las condiciones que
  * el documento ya no trae se retiran: la publicación de la entidad es la fuente de verdad.
  */
-export async function refreshLenderRates(client: Anthropic, lender: Lender & { rates: RateSource }, today: string) {
+export async function refreshLenderRates(client: ClaudeClient, lender: Lender & { rates: RateSource }, today: string) {
   const doc = await fetchSource(lender.rates);
   const sourceHash = createHash("sha256").update(doc.body).digest("hex");
   const checkedAt = new Date();

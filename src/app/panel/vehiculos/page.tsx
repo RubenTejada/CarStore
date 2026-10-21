@@ -38,9 +38,16 @@ export default async function MyVehicles({ searchParams }: PageProps<"/panel/veh
         title="Mis vehículos"
         text={`${vehicles.length} en total`}
         action={
-          <Link href="/panel/vehiculos/nuevo" className={button("primary")}>
-            Publicar vehículo
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            {user.dealerId && (
+              <Link href="/panel/vehiculos/importar" className={button("outline")}>
+                Importar inventario
+              </Link>
+            )}
+            <Link href="/panel/vehiculos/nuevo" className={button("primary")}>
+              Publicar vehículo
+            </Link>
+          </div>
         }
       />
       {ok && (
