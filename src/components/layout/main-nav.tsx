@@ -16,7 +16,9 @@ function isActive(href: string, pathname: string, params: URLSearchParams | null
   return path === "/vehiculos" ? params?.get("condicion") !== "nuevo" : true;
 }
 
-function Links({ items, variant, active }: { items: MainNavItem[]; variant: "bar" | "menu"; active: (href: string) => boolean }) {
+type Props = { items: MainNavItem[]; variant: "bar" | "menu"; dark?: boolean };
+
+function Links({ items, variant, dark = false, active }: Props & { active: (href: string) => boolean }) {
   return items.map(({ href, label }) => {
     const on = active(href);
     return (
@@ -31,7 +33,7 @@ function Links({ items, variant, active }: { items: MainNavItem[]; variant: "bar
             ? cn(
                 "relative flex h-16 items-center px-3 text-[15px] font-medium transition-colors",
                 "after:absolute after:inset-x-3 after:bottom-0 after:h-[3px] after:rounded-t-full after:bg-accent after:transition-transform after:duration-200",
-                on ? "text-ink after:scale-x-100" : "text-muted after:scale-x-0 hover:text-ink",
+                on ? (dark ? "text-white" : "text-ink") + " after:scale-x-100" : cn("after:scale-x-0", dark ? "text-white/70 hover:text-white" : "text-muted hover:text-ink"),
               )
             : cn(
                 "flex items-center gap-2 rounded-lg px-3 py-2.5 font-medium transition-colors",
@@ -46,13 +48,13 @@ function Links({ items, variant, active }: { items: MainNavItem[]; variant: "bar
   });
 }
 
-function ActiveLinks(props: { items: MainNavItem[]; variant: "bar" | "menu" }) {
+function ActiveLinks(props: Props) {
   const pathname = usePathname();
   const params = useSearchParams();
   return <Links {...props} active={(href) => isActive(href, pathname, params)} />;
 }
 
-export function MainNavLinks(props: { items: MainNavItem[]; variant: "bar" | "menu" }) {
+export function MainNavLinks(props: Props) {
   return (
     <Suspense fallback={<Links {...props} active={() => false} />}>
       <ActiveLinks {...props} />

@@ -5,7 +5,7 @@ import Image from "next/image";
 import { ChevronLeft, ChevronRight, ImagePlus, LoaderCircle, Trash2 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
-async function upload(file: File, kind: string) {
+export async function upload(file: File, kind: string) {
   const body = new FormData();
   body.set("file", file);
   body.set("kind", kind);

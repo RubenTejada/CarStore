@@ -7,16 +7,31 @@ import sharp from "sharp";
 // Almacenamiento local en disco (fase 2: S3/R2).
 export const UPLOAD_DIR = path.join(process.cwd(), "uploads");
 const MAX_BYTES = 10 * 1024 * 1024;
+// Las cámaras 360 entregan panoramas grandes (5760×2880 o más).
+const MAX_PANO_BYTES = 30 * 1024 * 1024;
 const ALLOWED = new Set(["jpeg", "png", "webp", "heif", "avif"]);
 
-/** Valida la imagen, la redimensiona a WebP y devuelve su URL pública (/uploads/...). */
-export async function saveImage(file: File, kind: "vehicle" | "logo" | "cover"): Promise<string> {
-  if (file.size > MAX_BYTES) throw new Error("La imagen supera 10 MB.");
+export type UploadKind = "vehicle" | "logo" | "cover" | "pano";
+
+/**
+ * Valida la imagen, la redimensiona a WebP y devuelve su URL pública (/uploads/...).
+ * `pano` es el interior 360: una foto equirectangular (proporción 2:1), hasta 4096 px de ancho.
+ */
+export async function saveImage(file: File, kind: UploadKind): Promise<string> {
+  const maxBytes = kind === "pano" ? MAX_PANO_BYTES : MAX_BYTES;
+  if (file.size > maxBytes) throw new Error(`La imagen supera ${maxBytes / 1024 / 1024} MB.`);
   const buffer = Buffer.from(await file.arrayBuffer());
   const meta = await sharp(buffer).metadata().catch(() => null);
   if (!meta?.format || !ALLOWED.has(meta.format)) throw new Error("Formato no permitido. Usa JPG, PNG o WebP.");
+  if (kind === "pano") {
+    const { width, height } = meta.autoOrient;
+    if (Math.abs(width / height - 2) > 0.02) throw new Error("La vista del interior debe ser una foto 360 equirectangular (proporción 2:1).");
+  }
 
-  const size = kind === "logo" ? { width: 400, height: 400, fit: "inside" as const } : { width: kind === "cover" ? 2000 : 1600, withoutEnlargement: true };
+  const size =
+    kind === "logo"
+      ? { width: 400, height: 400, fit: "inside" as const }
+      : { width: kind === "pano" ? 4096 : kind === "cover" ? 2000 : 1600, withoutEnlargement: true };
   const output = await sharp(buffer).rotate().resize(size).webp({ quality: 82 }).toBuffer();
 
   const month = new Date().toISOString().slice(0, 7);

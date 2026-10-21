@@ -41,7 +41,7 @@ import {
 } from "@/lib/labels";
 import { directionsUrls, googleMapsUrl, vehicleTitle, vehicleUrl, whatsappUrl } from "@/lib/urls";
 import { FeatureIcon } from "@/lib/feature-icons";
-import { Gallery } from "@/components/vehicle/gallery";
+import { VehicleMedia } from "@/components/vehicle/vehicle-media";
 import { VehicleCard } from "@/components/vehicle/vehicle-card";
 import { MapView } from "@/components/map/map-view";
 import { DealerBadge } from "@/components/dealer/dealer-badge";
@@ -159,7 +159,7 @@ export default async function VehiclePage({ params }: PageProps<"/vehiculos/[id]
 
       <div className="mt-4 grid grid-cols-1 gap-8 lg:grid-cols-[1fr_24rem]">
         <div className="min-w-0">
-          <Gallery photos={v.photos.map((p) => p.url)} alt={`${title} ${v.year}`} />
+          <VehicleMedia photos={v.photos.map((p) => p.url)} spinFrames={v.spinFrames} spinVideo={v.spinVideo} interiorPano={v.interiorPano} alt={`${title} ${v.year}`} />
         </div>
 
         <aside className="lg:sticky lg:top-24 lg:self-start">

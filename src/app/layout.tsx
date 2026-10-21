@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Archivo, Saira } from "next/font/google";
+import { LOOK } from "@/components/layout/look";
 import "./globals.css";
 
 const archivo = Archivo({
@@ -24,7 +25,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="es-DO" className={`${archivo.variable} ${saira.variable} h-full antialiased`}>
+    <html lang="es-DO" data-look={LOOK} className={`${archivo.variable} ${saira.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">{children}</body>
     </html>
   );

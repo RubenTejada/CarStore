@@ -13,6 +13,7 @@ import { Gallery } from "@/components/vehicle/gallery";
 import { button } from "@/components/ui/styles";
 import { cn } from "@/lib/cn";
 import type { FeatureCategory } from "@/generated/prisma/enums";
+import { PageHeader } from "@/components/layout/page-header";
 
 export const metadata: Metadata = { title: "Comparar vehículos", robots: { index: false } };
 
@@ -113,146 +114,119 @@ export default async function ComparePage({ searchParams }: PageProps<"/comparar
   const labelCell = "sticky left-0 z-10 bg-surface text-left font-medium text-muted shadow-[1px_0_0_var(--line)]";
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+    <>
       {sync}
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="display text-3xl sm:text-4xl">Comparar vehículos</h1>
-          <p className="mt-1 text-muted">
-            {vehicles.length < 2 ? "Agrega al menos otro vehículo para compararlos." : `${vehicles.map((v) => vehicleTitle(v)).join(" vs ")}`}
-          </p>
-        </div>
-        {vehicles.length >= 2 && (
-          <nav className="flex rounded-lg border border-line bg-surface p-1" aria-label="Filas">
-            {[
-              [false, "Todo"],
-              [true, "Solo diferencias"],
-            ].map(([diff, text]) => (
-              <Link
-                key={String(text)}
-                href={compareUrl(ids, diff as boolean)}
-                aria-current={onlyDiff === diff ? "page" : undefined}
-                className={cn("rounded-md px-3 py-1.5 text-sm font-semibold", onlyDiff === diff ? "bg-brand text-brand-ink" : "text-muted hover:text-ink")}
-              >
-                {text}
-              </Link>
-            ))}
-          </nav>
-        )}
-      </div>
-
-      <div className="mt-6 overflow-x-auto rounded-xl border border-line bg-surface">
-        <table className="w-full table-fixed border-collapse text-sm" style={{ minWidth: `${8.5 + columns * 12}rem` }}>
-          <caption className="sr-only">Comparación de {vehicles.length} vehículos</caption>
-          <colgroup>
-            <col className="w-34 sm:w-48" />
-            {Array.from({ length: columns }, (_, i) => (
-              <col key={i} />
-            ))}
-          </colgroup>
-          <thead>
-            <tr>
-              <td className={cn(labelCell, "p-3 sm:p-4")} />
-              {vehicles.map((v, i) => (
-                <th key={v.id} scope="col" className="p-3 text-left align-top font-normal sm:p-4">
-                  {/* Intervalos distintos por columna para que no cambien todas a la vez. */}
-                  <Gallery compact autoplay={4500 + i * 900} photos={v.photos.map((p) => p.url)} alt={`${vehicleTitle(v)} ${v.year}`} sizes="(min-width: 1024px) 25vw, 50vw">
-                    <span className="plate pointer-events-none absolute bottom-2 left-2 z-10 text-xs">{v.year}</span>
-                    <Link
-                      href={compareUrl(others(v.id), onlyDiff)}
-                      className="absolute top-2 right-2 z-20 grid size-7 place-items-center rounded-full bg-surface/90 text-ink shadow-sm backdrop-blur hover:bg-surface"
-                      aria-label={`Quitar ${vehicleTitle(v)} ${v.year} de la comparación`}
-                    >
-                      <X className="size-4" aria-hidden />
-                    </Link>
-                  </Gallery>
-                  <Link href={vehicleUrl(v)} className="wide mt-3 block text-base leading-tight font-bold hover:underline">
-                    {vehicleTitle(v)}
-                    {v.trim && <span className="block text-sm font-normal text-muted">{v.trim}</span>}
-                  </Link>
-                  <p className="mt-1 text-lg font-extrabold tracking-tight text-brand">{formatPrice(v.price, v.currency)}</p>
-                  <Link href={vehicleUrl(v)} className={cn(button("outline", "sm"), "mt-3 w-full")}>
-                    Ver vehículo
-                    <ArrowRight className="size-4" aria-hidden />
-                  </Link>
-                </th>
+      <PageHeader
+        title="Comparar vehículos"
+        description={vehicles.length < 2 ? "Agrega al menos otro vehículo para compararlos." : vehicles.map((v) => vehicleTitle(v)).join(" vs ")}
+        actions={
+          vehicles.length >= 2 && (
+            <nav className="flex rounded-lg border border-line bg-surface p-1" aria-label="Filas">
+              {[
+                [false, "Todo"],
+                [true, "Solo diferencias"],
+              ].map(([diff, text]) => (
+                <Link
+                  key={String(text)}
+                  href={compareUrl(ids, diff as boolean)}
+                  aria-current={onlyDiff === diff ? "page" : undefined}
+                  className={cn("rounded-md px-3 py-1.5 text-sm font-semibold", onlyDiff === diff ? "bg-brand text-brand-ink" : "text-muted hover:text-ink")}
+                >
+                  {text}
+                </Link>
               ))}
-              {canAdd && (
-                <td className="p-3 align-top sm:p-4">
-                  <Link
-                    href="/vehiculos"
-                    className="grid aspect-[3/2] place-items-center rounded-lg border-2 border-dashed border-line text-center font-semibold text-muted transition-colors hover:border-brand hover:text-brand"
-                  >
-                    <span>
-                      <Plus className="mx-auto size-6" aria-hidden />
-                      Agregar vehículo
-                    </span>
-                  </Link>
-                </td>
-              )}
-            </tr>
-          </thead>
-
-          <tbody>
-            <SectionRow title="Ficha técnica" span={columns + 1} />
-            {(!onlyDiff || !bodyRowSame) && (
+            </nav>
+          )
+        }
+      />
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+        <div className="overflow-x-auto rounded-xl border border-line bg-surface">
+          <table className="w-full table-fixed border-collapse text-sm" style={{ minWidth: `${8.5 + columns * 12}rem` }}>
+            <caption className="sr-only">Comparación de {vehicles.length} vehículos</caption>
+            <colgroup>
+              <col className="w-34 sm:w-48" />
+              {Array.from({ length: columns }, (_, i) => (
+                <col key={i} />
+              ))}
+            </colgroup>
+            <thead>
               <tr>
-                <th scope="row" className={cn(cell, labelCell)}>
-                  <span className="flex items-center gap-2">
-                    <BodySilhouette type={vehicles[0].bodyType} className="h-4 w-9 shrink-0 text-brand [--glass:var(--surface)] [--rim:var(--surface)] [--tire:var(--brand)]" />
-                    Carrocería
-                  </span>
-                </th>
-                {vehicles.map((v) => (
-                  <td key={v.id} className={cn(cell, "font-semibold")}>
-                    {BODY_TYPE_LABEL[v.bodyType]}
-                  </td>
+                <td className={cn(labelCell, "p-3 sm:p-4")} />
+                {vehicles.map((v, i) => (
+                  <th key={v.id} scope="col" className="p-3 text-left align-top font-normal sm:p-4">
+                    {/* Intervalos distintos por columna para que no cambien todas a la vez. */}
+                    <Gallery compact autoplay={4500 + i * 900} photos={v.photos.map((p) => p.url)} alt={`${vehicleTitle(v)} ${v.year}`} sizes="(min-width: 1024px) 25vw, 50vw">
+                      <span className="plate pointer-events-none absolute bottom-2 left-2 z-10 text-xs">{v.year}</span>
+                      <Link
+                        href={compareUrl(others(v.id), onlyDiff)}
+                        className="absolute top-2 right-2 z-20 grid size-7 place-items-center rounded-full bg-surface/90 text-ink shadow-sm backdrop-blur hover:bg-surface"
+                        aria-label={`Quitar ${vehicleTitle(v)} ${v.year} de la comparación`}
+                      >
+                        <X className="size-4" aria-hidden />
+                      </Link>
+                    </Gallery>
+                    <Link href={vehicleUrl(v)} className="wide mt-3 block text-base leading-tight font-bold hover:underline">
+                      {vehicleTitle(v)}
+                      {v.trim && <span className="block text-sm font-normal text-muted">{v.trim}</span>}
+                    </Link>
+                    <p className="mt-1 text-lg font-extrabold tracking-tight text-brand">{formatPrice(v.price, v.currency)}</p>
+                    <Link href={vehicleUrl(v)} className={cn(button("outline", "sm"), "mt-3 w-full")}>
+                      Ver vehículo
+                      <ArrowRight className="size-4" aria-hidden />
+                    </Link>
+                  </th>
                 ))}
-                {canAdd && <td className={cell} />}
+                {canAdd && (
+                  <td className="p-3 align-top sm:p-4">
+                    <Link
+                      href="/vehiculos"
+                      className="grid aspect-[3/2] place-items-center rounded-lg border-2 border-dashed border-line text-center font-semibold text-muted transition-colors hover:border-brand hover:text-brand"
+                    >
+                      <span>
+                        <Plus className="mx-auto size-6" aria-hidden />
+                        Agregar vehículo
+                      </span>
+                    </Link>
+                  </td>
+                )}
               </tr>
-            )}
-            {visibleSpecs.map((r) => (
-              <tr key={r.label}>
-                <th scope="row" className={cn(cell, labelCell)}>
-                  <span className="flex items-center gap-2">
-                    <r.icon className="size-4 shrink-0 text-brand" aria-hidden />
-                    {r.label}
-                  </span>
-                </th>
-                {r.values.map((val, i) => {
-                  const best = r.best?.includes(i);
-                  return (
-                    <td key={vehicles[i].id} className={cn(cell, "font-semibold", best && "bg-ok/8")}>
-                      {val ?? <span className="font-normal text-muted">—</span>}
-                      {best && (
-                        <span className="mt-1 flex w-fit items-center gap-1 rounded bg-ok/15 px-1.5 py-0.5 text-[11px] font-bold text-ok">
-                          <Check className="size-3" aria-hidden />
-                          {r.bestLabel}
-                        </span>
-                      )}
-                    </td>
-                  );
-                })}
-                {canAdd && <td className={cell} />}
-              </tr>
-            ))}
+            </thead>
 
-            {featureMap.size > 0 && (
-              <>
-                <SectionRow title="Características y facilidades" span={columns + 1} />
+            <tbody>
+              <SectionRow title="Ficha técnica" span={columns + 1} />
+              {(!onlyDiff || !bodyRowSame) && (
                 <tr>
                   <th scope="row" className={cn(cell, labelCell)}>
-                    Total
+                    <span className="flex items-center gap-2">
+                      <BodySilhouette type={vehicles[0].bodyType} className="h-4 w-9 shrink-0 text-brand [--glass:var(--surface)] [--rim:var(--surface)] [--tire:var(--brand)]" />
+                      Carrocería
+                    </span>
                   </th>
-                  {featureCounts.map((n, i) => {
-                    const best = bestIndices(featureCounts, "max").includes(i);
+                  {vehicles.map((v) => (
+                    <td key={v.id} className={cn(cell, "font-semibold")}>
+                      {BODY_TYPE_LABEL[v.bodyType]}
+                    </td>
+                  ))}
+                  {canAdd && <td className={cell} />}
+                </tr>
+              )}
+              {visibleSpecs.map((r) => (
+                <tr key={r.label}>
+                  <th scope="row" className={cn(cell, labelCell)}>
+                    <span className="flex items-center gap-2">
+                      <r.icon className="size-4 shrink-0 text-brand" aria-hidden />
+                      {r.label}
+                    </span>
+                  </th>
+                  {r.values.map((val, i) => {
+                    const best = r.best?.includes(i);
                     return (
                       <td key={vehicles[i].id} className={cn(cell, "font-semibold", best && "bg-ok/8")}>
-                        {n} de {featureMap.size}
+                        {val ?? <span className="font-normal text-muted">—</span>}
                         {best && (
                           <span className="mt-1 flex w-fit items-center gap-1 rounded bg-ok/15 px-1.5 py-0.5 text-[11px] font-bold text-ok">
                             <Check className="size-3" aria-hidden />
-                            Más equipado
+                            {r.bestLabel}
                           </span>
                         )}
                       </td>
@@ -260,30 +234,56 @@ export default async function ComparePage({ searchParams }: PageProps<"/comparar
                   })}
                   {canAdd && <td className={cell} />}
                 </tr>
-                {featureGroups.map((g) => (
-                  <FeatureGroup key={g.cat} title={FEATURE_CATEGORY_LABEL[g.cat]} rows={g.rows} ids={vehicles.map((v) => v.id)} canAdd={canAdd} cell={cell} labelCell={labelCell} />
-                ))}
-              </>
-            )}
+              ))}
 
-            {onlyDiff && !visibleSpecs.length && !featureGroups.length && bodyRowSame && (
-              <tr>
-                <td colSpan={columns + 1} className={cn(cell, "py-8 text-center text-muted")}>
-                  No hay diferencias entre estos vehículos.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              {featureMap.size > 0 && (
+                <>
+                  <SectionRow title="Características y facilidades" span={columns + 1} />
+                  <tr>
+                    <th scope="row" className={cn(cell, labelCell)}>
+                      Total
+                    </th>
+                    {featureCounts.map((n, i) => {
+                      const best = bestIndices(featureCounts, "max").includes(i);
+                      return (
+                        <td key={vehicles[i].id} className={cn(cell, "font-semibold", best && "bg-ok/8")}>
+                          {n} de {featureMap.size}
+                          {best && (
+                            <span className="mt-1 flex w-fit items-center gap-1 rounded bg-ok/15 px-1.5 py-0.5 text-[11px] font-bold text-ok">
+                              <Check className="size-3" aria-hidden />
+                              Más equipado
+                            </span>
+                          )}
+                        </td>
+                      );
+                    })}
+                    {canAdd && <td className={cell} />}
+                  </tr>
+                  {featureGroups.map((g) => (
+                    <FeatureGroup key={g.cat} title={FEATURE_CATEGORY_LABEL[g.cat]} rows={g.rows} ids={vehicles.map((v) => v.id)} canAdd={canAdd} cell={cell} labelCell={labelCell} />
+                  ))}
+                </>
+              )}
+
+              {onlyDiff && !visibleSpecs.length && !featureGroups.length && bodyRowSame && (
+                <tr>
+                  <td colSpan={columns + 1} className={cn(cell, "py-8 text-center text-muted")}>
+                    No hay diferencias entre estos vehículos.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        <p className="mt-3 text-xs text-muted">
+          {hasUsd &&
+            (usd.publishedOn
+              ? `Los precios en USD se comparan convertidos a pesos con la tasa de venta del Banco Central del ${usd.publishedOn.toLocaleDateString("es-DO", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })}: ${formatRate(usd.rate)} por US$1. `
+              : `Los precios en USD se comparan convertidos a pesos con una tasa de referencia de ${formatRate(usd.rate)} por US$1. `)}
+          Confirma los datos con el vendedor antes de decidir.
+        </p>
       </div>
-      <p className="mt-3 text-xs text-muted">
-        {hasUsd &&
-          (usd.publishedOn
-            ? `Los precios en USD se comparan convertidos a pesos con la tasa de venta del Banco Central del ${usd.publishedOn.toLocaleDateString("es-DO", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })}: ${formatRate(usd.rate)} por US$1. `
-            : `Los precios en USD se comparan convertidos a pesos con una tasa de referencia de ${formatRate(usd.rate)} por US$1. `)}
-        Confirma los datos con el vendedor antes de decidir.
-      </p>
-    </div>
+    </>
   );
 }
 

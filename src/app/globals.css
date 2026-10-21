@@ -39,6 +39,15 @@
   }
 }
 
+/* Propuesta "marco" (ver components/layout/look.ts): concreto azulado para que las tarjetas blancas resalten. */
+@media (prefers-color-scheme: light) {
+  :root[data-look="marco"] {
+    --bg: #e4eaf3;
+    --surface-2: #dbe2ed;
+    --line: #cdd5e2;
+  }
+}
+
 @theme inline {
   --color-bg: var(--bg);
   --color-surface: var(--surface);

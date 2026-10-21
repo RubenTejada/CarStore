@@ -15,6 +15,7 @@ import { FeatureIcon } from "@/lib/feature-icons";
 import { button, card, input, label } from "@/components/ui/styles";
 import { LocationPicker } from "@/components/map/location-picker";
 import { PhotoUploader } from "./photo-uploader";
+import { View360Uploader } from "./view-360-uploader";
 import { FormMessage } from "./form-message";
 import { useFormAction } from "./use-form-action";
 import { cn } from "@/lib/cn";
@@ -43,6 +44,8 @@ export type VehicleFormValues = {
   lat: number;
   lng: number;
   photos: string[];
+  spinFrames: string[];
+  interiorPano: string | null;
   features: string[];
   featured: boolean;
 };
@@ -77,6 +80,10 @@ export function VehicleForm({ action, values, brands, features, provinces, featu
 
       <Section title="Fotos" text="Sube buenas fotos: exterior, interior, tablero y motor.">
         <PhotoUploader name="photos" defaultValue={values.photos} />
+      </Section>
+
+      <Section title="Vista 360°" text="Opcional. Los anuncios con vista 360 muestran el auto girando y el interior para mirar alrededor.">
+        <View360Uploader spinFrames={values.spinFrames} interiorPano={values.interiorPano} />
       </Section>
 
       <Section title="Vehículo">

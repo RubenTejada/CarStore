@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ArrowRight, ChevronLeft, type LucideIcon } from "lucide-react";
@@ -16,7 +17,8 @@ import { BrandLogo, BrandTileBody, brandCell, brandGrid, brandTile, type BrandMa
 
 type FinderBrand = BrandMark & {
   slug: string;
-  models: { slug: string; name: string; bodyType: BodyType; stock: StockRow[] }[];
+  emblem: string | null;
+  models: { slug: string; name: string; bodyType: BodyType; stock: StockRow[]; photo: string | null }[];
 };
 
 type StockFilter = { type: BodyType | null; condition: StockRow["condition"] | null; fuel: Fuel | null; transmission: Transmission | null };
@@ -97,6 +99,9 @@ export function VehicleFinder({ brands }: { brands: FinderBrand[] }) {
   const href = (extra: Record<string, string | undefined>) => `/vehiculos?${params(extra)}`;
   const models = brand ? brand.models.map((m) => ({ ...m, n: count(m.stock, filter) })).filter((m) => m.n > 0) : [];
   const total = models.reduce((a, m) => a + m.n, 0);
+  // Fondo de la franja: el emblema de la marca sobre un carro; si no hay, la foto del modelo con más vehículos que cumplen los filtros.
+  const photo =
+    brand?.emblem ?? [...models].sort((a, b) => b.n - a.n).find((m) => m.photo)?.photo ?? brand?.models.find((m) => m.photo)?.photo;
 
   const typeInfo = BODY_TYPES.find((t) => t.value === type);
   const slide = {
@@ -181,6 +186,12 @@ export function VehicleFinder({ brands }: { brands: FinderBrand[] }) {
               >
                 {i + 1}
               </span>
+              {i === 0 && typeInfo && <BodySilhouette type={typeInfo.value} className="h-4 w-10 shrink-0 [--glass:rgba(11,26,54,0.45)] [--rim:#8fa3c4] [--tire:#050b18]" />}
+              {i === 1 && brand && (
+                <span aria-hidden className="contents">
+                  <BrandLogo brand={brand} className="size-5 shrink-0" />
+                </span>
+              )}
               {i === 0 && typeInfo ? typeInfo.plural : i === 1 && brand ? brand.name : s}
             </button>
             {i < STEPS.length - 1 && <span className="h-px w-6 bg-white/25" aria-hidden />}
@@ -261,9 +272,15 @@ export function VehicleFinder({ brands }: { brands: FinderBrand[] }) {
                   Ver todos los {brand.name}
                 </Link>
               </div>
-              <div className="flex items-center gap-4 rounded-xl bg-white p-4 text-night">
-                <BrandLogo brand={brand} colored className="size-14 shrink-0" />
-                <div>
+              <div className="relative flex items-center gap-4 overflow-hidden rounded-xl bg-white p-4 text-night">
+                {photo && (
+                  <div className="absolute inset-y-0 right-0 w-full sm:aspect-[5/1] sm:w-auto sm:max-w-full" aria-hidden>
+                    <Image src={photo} alt="" fill sizes="(min-width: 640px) 560px, 100vw" className="object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-white via-white/40 to-transparent" />
+                  </div>
+                )}
+                <BrandLogo brand={brand} colored className="relative size-14 shrink-0" />
+                <div className="relative">
                   <p className="display text-2xl">{brand.name}</p>
                   <p className="text-sm text-[#566176]">Elige un modelo</p>
                 </div>
@@ -290,7 +307,7 @@ export function VehicleFinder({ brands }: { brands: FinderBrand[] }) {
                 ))}
               </ul>
 
-              <div className="mt-6 flex flex-wrap items-center gap-3">
+              <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
                 <Link
                   href={href({ marca: brand.slug })}
                   className="inline-flex h-12 items-center gap-2 rounded-xl bg-accent px-5 font-semibold text-white transition-colors hover:bg-accent/90"

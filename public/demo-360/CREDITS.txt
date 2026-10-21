@@ -1,0 +1,12 @@
+Vistas 360 de demostración (giro exterior e interior), renderizadas a partir de:
+
+"Car Concept" — glTF Sample Assets, Khronos Group
+https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/CarConcept
+© 2024 Darmstadt Graphics Group GmbH; modelo y texturas de Eric Chadwick,
+basado en un modelo de dominio público de Unity Fan.
+Licencia: Creative Commons Attribution 4.0 International (CC BY 4.0)
+https://creativecommons.org/licenses/by/4.0/
+
+Cambios: renderizado en estudio con three.js en dos colores (perla y grafito): 96 cuadros
+del giro en WebP, el giro en video MP4 (H.264, 30 fps, 9 s por vuelta) y un panorama
+equirectangular desde el puesto del conductor.

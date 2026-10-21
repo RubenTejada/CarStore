@@ -13,6 +13,8 @@ import { SearchBox } from "@/components/browse/search-box";
 import { SortSelect } from "@/components/browse/sort-select";
 import { VehicleCard } from "@/components/vehicle/vehicle-card";
 import { MapView } from "@/components/map/map-view";
+import { PageHeader } from "@/components/layout/page-header";
+import { LOOK } from "@/components/layout/look";
 import { cn } from "@/lib/cn";
 
 export const metadata: Metadata = { title: "Vehículos en venta" };
@@ -48,114 +50,114 @@ export default async function VehiclesPage({ searchParams }: PageProps<"/vehicul
   const qs = toQueryString(f);
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="display text-3xl sm:text-4xl">{heading}</h1>
-          <p className="mt-1 text-muted" aria-live="polite">
-            {result.total === 1 ? "1 vehículo encontrado" : `${result.total.toLocaleString("es-DO")} vehículos encontrados`}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <SortSelect value={f.orden ?? "recientes"} />
-          <nav className="flex rounded-lg border border-line bg-surface p-1" aria-label="Vista">
-            <Link
-              href={toQueryString(f, { vista: undefined, pagina: undefined }) || "?"}
-              aria-current={!mapMode ? "page" : undefined}
-              className={cn("flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-semibold", !mapMode ? "bg-brand text-brand-ink" : "text-muted hover:text-ink")}
-            >
-              <LayoutGrid className="size-4" aria-hidden />
-              Lista
-            </Link>
-            <Link
-              href={toQueryString(f, { vista: "mapa", pagina: undefined })}
-              aria-current={mapMode ? "page" : undefined}
-              className={cn("flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-semibold", mapMode ? "bg-brand text-brand-ink" : "text-muted hover:text-ink")}
-            >
-              <MapIcon className="size-4" aria-hidden />
-              Mapa
-            </Link>
-          </nav>
-        </div>
-      </div>
-
-      <SearchBox key={qs} params={values} defaultValue={f.q} className="mt-5 max-w-2xl" />
-
-      {chips.length > 0 && (
-        <ul className="mt-5 flex flex-wrap gap-2" aria-label="Filtros activos">
-          {chips.map((c) => (
-            <li key={c.label}>
+    <>
+      <PageHeader
+        title={heading}
+        description={result.total === 1 ? "1 vehículo encontrado" : `${result.total.toLocaleString("es-DO")} vehículos encontrados`}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <SortSelect value={f.orden ?? "recientes"} />
+            <nav className="flex rounded-lg border border-line bg-surface p-1" aria-label="Vista">
               <Link
-                href={toQueryString(f, { ...c.remove, pagina: undefined }) || "?"}
-                className="flex items-center gap-1.5 rounded-full border border-line bg-surface py-1.5 pr-2.5 pl-3.5 text-sm font-medium hover:border-ink"
-                aria-label={`Quitar filtro ${c.label}`}
+                href={toQueryString(f, { vista: undefined, pagina: undefined }) || "?"}
+                aria-current={!mapMode ? "page" : undefined}
+                className={cn("flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-semibold", !mapMode ? "bg-brand text-brand-ink" : "text-muted hover:text-ink")}
               >
-                {c.label}
-                <X className="size-3.5" aria-hidden />
+                <LayoutGrid className="size-4" aria-hidden />
+                Lista
+              </Link>
+              <Link
+                href={toQueryString(f, { vista: "mapa", pagina: undefined })}
+                aria-current={mapMode ? "page" : undefined}
+                className={cn("flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-semibold", mapMode ? "bg-brand text-brand-ink" : "text-muted hover:text-ink")}
+              >
+                <MapIcon className="size-4" aria-hidden />
+                Mapa
+              </Link>
+            </nav>
+          </div>
+        }
+      >
+        <SearchBox key={qs} params={values} defaultValue={f.q} tone={LOOK === "banda" ? "dark" : "light"} className="mt-5 max-w-2xl" />
+      </PageHeader>
+
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+        {chips.length > 0 && (
+          <ul className="mb-6 flex flex-wrap gap-2" aria-label="Filtros activos">
+            {chips.map((c) => (
+              <li key={c.label}>
+                <Link
+                  href={toQueryString(f, { ...c.remove, pagina: undefined }) || "?"}
+                  className="flex items-center gap-1.5 rounded-full border border-line bg-surface py-1.5 pr-2.5 pl-3.5 text-sm font-medium hover:border-ink"
+                  aria-label={`Quitar filtro ${c.label}`}
+                >
+                  {c.label}
+                  <X className="size-3.5" aria-hidden />
+                </Link>
+              </li>
+            ))}
+            <li>
+              <Link href={f.vista ? "?vista=mapa" : "/vehiculos"} className="flex py-1.5 text-sm font-semibold text-accent hover:underline">
+                Limpiar todo
               </Link>
             </li>
-          ))}
-          <li>
-            <Link href={f.vista ? "?vista=mapa" : "/vehiculos"} className="flex py-1.5 text-sm font-semibold text-accent hover:underline">
-              Limpiar todo
-            </Link>
-          </li>
-        </ul>
-      )}
+          </ul>
+        )}
 
-      <div className="mt-6 grid grid-cols-1 gap-8 lg:grid-cols-[18rem_1fr]">
-        <aside>
-          <input type="checkbox" id="filters-toggle" className="peer sr-only" />
-          <label
-            htmlFor="filters-toggle"
-            className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-line bg-surface py-3 font-semibold peer-focus-visible:ring-2 peer-focus-visible:ring-accent lg:hidden"
-          >
-            <SlidersHorizontal className="size-4" aria-hidden />
-            Filtros {chips.length > 0 && `(${chips.length})`}
-          </label>
-          <div className="mt-4 hidden peer-checked:block lg:mt-0 lg:block">
-            <Filters f={f} values={values} brands={brands} trims={trims} facets={facets} features={features} qs={qs} />
-          </div>
-        </aside>
-
-        <section aria-label="Resultados">
-          {mapMode ? (
-            <MapView
-              className="h-[70vh] min-h-96"
-              points={points.map((v) => ({
-                id: v.id,
-                lat: v.lat,
-                lng: v.lng,
-                kind: "vehicle",
-                title: `${vehicleTitle(v)} ${v.year}`,
-                subtitle: `${formatPrice(v.price, v.currency)}, ${formatKm(v.mileageKm)}`,
-                href: vehicleUrl(v),
-                image: v.photos[0]?.url,
-              }))}
-            />
-          ) : result.items.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-line p-12 text-center">
-              <p className="display text-2xl">No hay vehículos con estos filtros</p>
-              <p className="mt-2 text-muted">Quita algún filtro o amplía el rango de precio o año.</p>
-              <Link href="/vehiculos" className="mt-5 inline-block font-semibold text-brand hover:underline">
-                Ver todos los vehículos
-              </Link>
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[18rem_1fr]">
+          <aside>
+            <input type="checkbox" id="filters-toggle" className="peer sr-only" />
+            <label
+              htmlFor="filters-toggle"
+              className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-line bg-surface py-3 font-semibold peer-focus-visible:ring-2 peer-focus-visible:ring-accent lg:hidden"
+            >
+              <SlidersHorizontal className="size-4" aria-hidden />
+              Filtros {chips.length > 0 && `(${chips.length})`}
+            </label>
+            <div className="mt-4 hidden peer-checked:block lg:mt-0 lg:block">
+              <Filters f={f} values={values} brands={brands} trims={trims} facets={facets} features={features} qs={qs} />
             </div>
-          ) : (
-            <>
-              <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
-                {result.items.map((v, i) => (
-                  <li key={v.id}>
-                    <VehicleCard v={v} priority={i < 3} className="h-full" />
-                  </li>
-                ))}
-              </ul>
-              {result.pages > 1 && <Pagination f={f} page={result.page} pages={result.pages} />}
-            </>
-          )}
-        </section>
+          </aside>
+
+          <section aria-label="Resultados">
+            {mapMode ? (
+              <MapView
+                className="h-[70vh] min-h-96"
+                points={points.map((v) => ({
+                  id: v.id,
+                  lat: v.lat,
+                  lng: v.lng,
+                  kind: "vehicle",
+                  title: `${vehicleTitle(v)} ${v.year}`,
+                  subtitle: `${formatPrice(v.price, v.currency)}, ${formatKm(v.mileageKm)}`,
+                  href: vehicleUrl(v),
+                  image: v.photos[0]?.url,
+                }))}
+              />
+            ) : result.items.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-line p-12 text-center">
+                <p className="display text-2xl">No hay vehículos con estos filtros</p>
+                <p className="mt-2 text-muted">Quita algún filtro o amplía el rango de precio o año.</p>
+                <Link href="/vehiculos" className="mt-5 inline-block font-semibold text-brand hover:underline">
+                  Ver todos los vehículos
+                </Link>
+              </div>
+            ) : (
+              <>
+                <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                  {result.items.map((v, i) => (
+                    <li key={v.id}>
+                      <VehicleCard v={v} priority={i < 3} className="h-full" />
+                    </li>
+                  ))}
+                </ul>
+                {result.pages > 1 && <Pagination f={f} page={result.page} pages={result.pages} />}
+              </>
+            )}
+          </section>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 

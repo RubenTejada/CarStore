@@ -2,6 +2,7 @@ import "server-only";
 import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
 import { getBrandLogo } from "@/lib/brand-logos";
+import { BRAND_EMBLEMS } from "@/lib/brand-emblems";
 import { INVENTORY_TAG, INVENTORY_TTL_SECONDS } from "@/lib/inventory-cache";
 import type { BodyType, Condition, Fuel, Transmission } from "@/generated/prisma/enums";
 import type { SearchIndex } from "@/lib/search-suggest";
@@ -14,14 +15,22 @@ export type StockRow = { bodyType: BodyType; condition: Condition; fuel: Fuel; t
  * con el conteo de vehículos publicados por carrocería, condición, combustible y transmisión.
  */
 async function loadBrowseCatalog() {
-  const [brands, counts] = await Promise.all([
+  const [brands, counts, photos] = await Promise.all([
     db.brand.findMany({ orderBy: { name: "asc" }, include: { models: { orderBy: { name: "asc" } } } }),
     db.vehicle.groupBy({
       by: ["modelId", "bodyType", "condition", "fuel", "transmission"],
       where: { status: "ACTIVE" },
       _count: true,
     }),
+    // Una foto por modelo (del vehículo publicado más reciente con fotos) para el fondo del buscador.
+    db.vehicle.findMany({
+      where: { status: "ACTIVE", photos: { some: {} } },
+      distinct: ["modelId"],
+      orderBy: [{ modelId: "asc" }, { createdAt: "desc" }],
+      select: { modelId: true, photos: { select: { url: true }, orderBy: { position: "asc" }, take: 1 } },
+    }),
   ]);
+  const photoByModel = new Map(photos.map((v) => [v.modelId, v.photos[0]?.url ?? null]));
   const byModel = new Map<string, StockRow[]>();
   for (const { modelId, _count, ...dims } of counts) {
     const rows = byModel.get(modelId) ?? [];
@@ -33,12 +42,19 @@ async function loadBrowseCatalog() {
     name: b.name,
     color: b.color,
     logo: getBrandLogo(b.iconSlug),
-    models: b.models.map((m) => ({ slug: m.slug, name: m.name, bodyType: m.bodyType, stock: byModel.get(m.id) ?? [] })),
+    emblem: BRAND_EMBLEMS[b.slug] ?? null,
+    models: b.models.map((m) => ({
+      slug: m.slug,
+      name: m.name,
+      bodyType: m.bodyType,
+      stock: byModel.get(m.id) ?? [],
+      photo: photoByModel.get(m.id) ?? null,
+    })),
   }));
 }
 
 /** Cacheado: se invalida con la etiqueta del inventario (y cada INVENTORY_TTL_SECONDS). */
-export const getBrowseCatalog = unstable_cache(loadBrowseCatalog, ["browse-catalog-v1"], {
+export const getBrowseCatalog = unstable_cache(loadBrowseCatalog, ["browse-catalog-v4"], {
   tags: [INVENTORY_TAG],
   revalidate: INVENTORY_TTL_SECONDS,
 });

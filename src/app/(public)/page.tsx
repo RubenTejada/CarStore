@@ -7,6 +7,7 @@ import { formatPrice } from "@/lib/labels";
 import { VehicleFinder } from "@/components/browse/vehicle-finder";
 import { BrandTileBody, brandCell, brandGrid, brandTile } from "@/components/browse/brand-logo";
 import { VehicleCard } from "@/components/vehicle/vehicle-card";
+import { SectionPlayToggle, SpinPlayback } from "@/components/vehicle/play-toggle";
 import { MapView } from "@/components/map/map-view";
 import { DealerBadge } from "@/components/dealer/dealer-badge";
 import { button } from "@/components/ui/styles";
@@ -32,10 +33,6 @@ export default async function HomePage() {
   return (
     <>
       <section className="relative overflow-hidden bg-night">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 bottom-6 h-1 bg-[repeating-linear-gradient(90deg,rgba(245,183,0,0.55)_0_56px,transparent_56px_112px)]"
-        />
         <div className="relative mx-auto max-w-7xl px-4 pt-12 pb-16 sm:px-6 lg:pt-16">
           <h1 className="display text-3xl text-white sm:text-4xl">
             ¿Qué vas a <span className="text-[#f5b700]">manejar</span>?
@@ -50,24 +47,29 @@ export default async function HomePage() {
       </section>
 
       {featured.length > 0 && (
+        <SpinPlayback>
         <section className="mx-auto max-w-7xl px-4 pt-16 sm:px-6">
           <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
             <div>
               <h2 className="display text-3xl">Destacados</h2>
               <p className="mt-1 text-muted">Vehículos promocionados por dealers y vendedores con plan.</p>
             </div>
-            <Link href="/planes" className="shrink-0 text-sm font-semibold text-brand hover:underline">
-              Destaca tu vehículo
-            </Link>
+            <span className="flex shrink-0 items-center gap-5">
+              {featured.some((v) => v.spinFrames.length) && <SectionPlayToggle />}
+              <Link href="/planes" className="text-sm font-semibold text-brand hover:underline">
+                Destaca tu vehículo
+              </Link>
+            </span>
           </div>
           <ul className="scrollbar-none -mx-4 mt-6 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 sm:-mx-6 sm:px-6">
             {featured.map((v, i) => (
               <li key={v.id} className="w-[78%] shrink-0 snap-start sm:w-[45%] lg:w-[23.5%]">
-                <VehicleCard v={v} priority={i < 2} className="h-full" />
+                <VehicleCard v={v} priority={i < 2} spin className="h-full" />
               </li>
             ))}
           </ul>
         </section>
+        </SpinPlayback>
       )}
 
       <section className="mx-auto max-w-7xl px-4 pt-20 sm:px-6">

@@ -210,6 +210,13 @@ model Vehicle {
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
+  // Vista 360: `spinFrames` son las fotos del giro exterior en orden (el auto girando sobre su eje),
+  // `spinVideo` el mismo giro como video en bucle (opcional, para el giro automático) e
+  // `interiorPano`, una foto equirectangular 2:1 de la cabina.
+  spinFrames   String[]  @default([])
+  spinVideo    String?
+  interiorPano String?
+
   photos   VehiclePhoto[]
   features VehicleFeature[]
 

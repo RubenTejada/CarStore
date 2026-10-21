@@ -42,6 +42,8 @@ export async function getVehicleFormData(user: CurrentUser) {
     lat: dealer?.lat ?? 18.4861,
     lng: dealer?.lng ?? -69.9312,
     photos: [],
+    spinFrames: [],
+    interiorPano: null,
     features: [],
     featured: false,
   };

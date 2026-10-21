@@ -73,6 +73,16 @@ src/components/map/         Google Maps, mapa esquemático y selector de ubicaci
 - Al vencer un plan, sus vehículos se pausan (revisión automática cada 10 minutos al navegar).
 - Las fotos se guardan en `uploads/` (disco local), convertidas a WebP.
 
+## Vista 360
+
+Cada vehículo puede tener un **giro exterior** (`Vehicle.spinFrames`: 12 a 72 fotos tomadas alrededor del auto, en orden; opcionalmente `Vehicle.spinVideo`, el mismo giro como MP4 en bucle) y un **interior 360** (`Vehicle.interiorPano`: foto equirectangular 2:1 de una cámara 360). Se suben desde el formulario del vehículo en el panel.
+
+- En la ficha aparecen como pestañas junto a las fotos: el giro se arrastra o se mueve con las flechas, el interior se recorre arrastrando y se acerca con la rueda, el pellizco o +/−.
+- En los destacados de la portada los vehículos con giro se muestran girando solos; un botón de la sección lo pausa y se respeta "reducir movimiento".
+- Con video, el giro automático es el video (más suave y liviano: la portada no descarga los cuadros) y al tocarlo en la ficha sigue el canvas desde el mismo ángulo. Si el vendedor cambia los cuadros, el video se descarta.
+- Los visores no usan librerías: el giro dibuja en un canvas fundiendo cada cuadro con el siguiente y el interior es un shader WebGL2 (`src/components/vehicle/`).
+- Las vistas de demostración (`public/demo-360/`) son renders del "Car Concept" de Khronos (CC BY 4.0, ver `public/demo-360/CREDITS.txt`) en dos colores: 96 cuadros, video de 9 s por vuelta e interior. El seed se las asigna a las jeepetas Mercedes-Benz y Lexus; una de cada marca encabeza los destacados.
+
 ## Tasas diarias (dólar y préstamos de vehículos)
 
 El workflow `.github/workflows/daily-rates.yml` corre cada día a las 9:15 a. m. (hora de RD) y ejecuta `npm run rates:update` (`scripts/update-rates.ts`):

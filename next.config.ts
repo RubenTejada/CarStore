@@ -6,6 +6,9 @@ const nextConfig: NextConfig = {
     localPatterns: [
       { pathname: "/uploads/**", search: "" },
       { pathname: "/lenders/**", search: "" },
+      // Vistas 360 de demostración (prisma/seed.ts).
+      { pathname: "/demo-360/**", search: "" },
+      { pathname: "/emblems/**", search: "" },
     ],
   },
   turbopack: {

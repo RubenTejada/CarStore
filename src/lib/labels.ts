@@ -156,3 +156,7 @@ export function slugify(text: string) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
 }
+
+/** Fotos del giro exterior 360: menos de 12 se ve a saltos; más de 72 pesa sin verse mejor. */
+export const SPIN_MIN_FRAMES = 12;
+export const SPIN_MAX_FRAMES = 72;

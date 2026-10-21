@@ -1,15 +1,21 @@
 import Image from "next/image";
 import Link from "next/link";
-import { BadgeCheck, Gauge, MapPin, Star } from "lucide-react";
+import { BadgeCheck, Gauge, MapPin, Rotate3d, Star } from "lucide-react";
 import type { VehicleCard as Vehicle } from "@/lib/search";
 import { CONDITION_LABEL, TRANSMISSION_LABEL, formatKm, formatPrice } from "@/lib/labels";
 import { vehicleTitle, vehicleUrl } from "@/lib/urls";
 import { cn } from "@/lib/cn";
 import { CompareToggle } from "@/components/compare/compare-toggle";
+import { SpinViewer } from "./spin-viewer";
 
-export function VehicleCard({ v, priority = false, className }: { v: Vehicle; priority?: boolean; className?: string }) {
+const cardSizes = "(min-width: 1280px) 25vw, (min-width: 768px) 33vw, 100vw";
+
+/** Con `spin`, si el vehículo tiene giro 360 se muestra girando en lugar de la foto de portada. */
+export function VehicleCard({ v, priority = false, spin = false, className }: { v: Vehicle; priority?: boolean; spin?: boolean; className?: string }) {
   const photo = v.photos[0]?.url;
   const featured = v.featuredUntil && new Date(v.featuredUntil) > new Date();
+  const spinning = spin && v.spinFrames.length > 0;
+  const has360 = v.spinFrames.length > 0 || !!v.interiorPano;
   // El botón de comparar va fuera del enlace (no se anidan controles) y se superpone a la foto.
   return (
     <div className={cn("relative", className)}>
@@ -18,15 +24,25 @@ export function VehicleCard({ v, priority = false, className }: { v: Vehicle; pr
         className="group flex h-full flex-col overflow-hidden rounded-xl border border-line bg-surface transition-[border-color,box-shadow] hover:border-ink/40 hover:shadow-[0_10px_30px_-12px_rgba(11,26,54,0.35)]"
       >
         <div className="relative aspect-[3/2] overflow-hidden bg-surface-2">
-          {photo && (
-            <Image
-              src={photo}
-              alt={`${vehicleTitle(v)} ${v.year}`}
-              fill
-              priority={priority}
-              sizes="(min-width: 1280px) 25vw, (min-width: 768px) 33vw, 100vw"
-              className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-            />
+          {spinning ? (
+            <SpinViewer frames={v.spinFrames} video={v.spinVideo} alt={`${vehicleTitle(v)} ${v.year}`} priority={priority} sizes={cardSizes} className="absolute inset-0" />
+          ) : (
+            photo && (
+              <Image
+                src={photo}
+                alt={`${vehicleTitle(v)} ${v.year}`}
+                fill
+                priority={priority}
+                sizes={cardSizes}
+                className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+              />
+            )
+          )}
+          {has360 && (
+            <span className="absolute right-2.5 bottom-2.5 flex items-center gap-1 rounded-md bg-night/80 px-2 py-0.5 text-xs font-bold text-white">
+              <Rotate3d className="size-3.5" aria-hidden />
+              360°
+            </span>
           )}
           <span className="plate absolute bottom-2.5 left-2.5 text-sm">{v.year}</span>
           <span className="absolute top-2.5 left-2.5 flex gap-1.5">

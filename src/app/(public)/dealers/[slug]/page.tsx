@@ -11,6 +11,7 @@ import { DealerBadge } from "@/components/dealer/dealer-badge";
 import { VehicleCard } from "@/components/vehicle/vehicle-card";
 import { MapView } from "@/components/map/map-view";
 import { SortSelect } from "@/components/browse/sort-select";
+import { BodySilhouette } from "@/components/browse/body-silhouette";
 import { button } from "@/components/ui/styles";
 import { cn } from "@/lib/cn";
 
@@ -82,7 +83,11 @@ export default async function DealerPage({ params, searchParams }: PageProps<"/d
               Todos ({total})
             </Link>
             {BODY_TYPES.filter((t) => facets.types[t.value]).map((t) => (
-              <Link key={t.value} href={link({ tipo: t.value })} className={chip(f.tipo === t.value)}>
+              <Link key={t.value} href={link({ tipo: t.value })} className={cn(chip(f.tipo === t.value), "flex items-center gap-2")}>
+                <BodySilhouette
+                  type={t.value}
+                  className={cn("h-4 w-10 [--tire:currentColor]", f.tipo === t.value ? "[--glass:var(--brand)] [--rim:var(--brand)]" : "[--glass:var(--surface)] [--rim:var(--surface)]")}
+                />
                 {t.plural} ({facets.types[t.value]})
               </Link>
             ))}

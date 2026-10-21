@@ -9,7 +9,7 @@ export function SortSelect({ value }: { value: string }) {
   const params = useSearchParams();
   return (
     <label className="flex items-center gap-2 text-sm">
-      <span className="sr-only sm:not-sr-only sm:text-muted">Ordenar</span>
+      <span className="sr-only sm:not-sr-only sm:opacity-70">Ordenar</span>
       <select
         value={value}
         onChange={(e) => {
@@ -19,7 +19,7 @@ export function SortSelect({ value }: { value: string }) {
           next.delete("pagina");
           router.push(`${pathname}?${next}`, { scroll: false });
         }}
-        className="h-10 rounded-lg border border-line bg-surface px-3 text-sm font-semibold"
+        className="h-10 rounded-lg border border-line bg-surface px-3 text-sm font-semibold text-ink"
       >
         {Object.entries(SORTS).map(([k, v]) => (
           <option key={k} value={k}>

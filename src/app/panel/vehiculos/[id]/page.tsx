@@ -50,6 +50,8 @@ export default async function EditVehicle({ params }: PageProps<"/panel/vehiculo
           lat: v.lat,
           lng: v.lng,
           photos: v.photos.map((p) => p.url),
+          spinFrames: v.spinFrames,
+          interiorPano: v.interiorPano,
           features: v.features.map((f) => f.feature.slug),
           featured: !!v.featuredUntil && v.featuredUntil > new Date(),
         }}

@@ -149,7 +149,35 @@ const CATALOG: PhotoEntry[] = [
   { brand: "Toyota", model: "Sienna", trim: "XLE", color: "Gris", photos: ["1648902180388-e52c0fdebcd4"], minYear: 2021, price: [3_000_000, 3_900_000] },
   { brand: "Chrysler", model: "Pacifica", trim: "Limited", color: "Plata", photos: ["1623371857133-6d5552bbdc13", "1623371871371-5ce94f7188df"], minYear: 2017, price: [2_100_000, 3_200_000] },
   { brand: "Hyundai", model: "Staria", trim: "Lounge", color: "Negro", photos: ["1776929484525-d5a85a426949"], minYear: 2022, price: [2_700_000, 3_500_000] },
+  // Jeepetas de lujo con vista 360 de demostración (ver DEMO_360_BRANDS). Van al final para no cambiar el azar de las anteriores.
+  { brand: "Mercedes-Benz", model: "GLE", trim: "AMG GLE 53", color: "Negro", photos: ["1692970095410-6bd548fc7f6c", "1692970094412-8d701315773c", "1692970093810-e47f696b37ed", "1692970096309-f5433ab9378c"], minYear: 2021, price: [95_000, 125_000], currency: "USD" },
+  { brand: "Mercedes-Benz", model: "GLE", trim: "AMG GLE 63", color: "Blanco", photos: ["1669234226129-8ede05b40eff", "1669221817458-63a3da4ddecb"], minYear: 2021, price: [120_000, 150_000], currency: "USD" },
+  { brand: "Mercedes-Benz", model: "GLE", trim: "GLE 350", color: "Plata", photos: ["1563721911289-ada2924d66f1"], minYear: 2017, price: [3_200_000, 4_200_000] },
+  { brand: "Mercedes-Benz", model: "GLE", trim: "GLE 450", color: "Azul", photos: ["1718128769487-7ecc0ec06f97"], minYear: 2020, price: [4_800_000, 6_200_000] },
+  { brand: "Mercedes-Benz", model: "GLC", trim: "GLC 300", color: "Blanco", photos: ["1684239845179-0bb0362dfd28", "1684239725236-5f3b6e9f02c3", "1684239750605-059c21edaf66"], minYear: 2018, price: [2_800_000, 3_800_000] },
+  { brand: "Mercedes-Benz", model: "GLC", trim: "AMG GLC 43", color: "Negro", photos: ["1638980707800-8f6d3fce4598"], minYear: 2019, price: [3_600_000, 4_600_000] },
+  { brand: "Lexus", model: "RX", trim: "RX 350h", color: "Blanco", photos: ["1742941129482-843e7492aa0b", "1742941158083-be03727c216b"], minYear: 2023, price: [4_200_000, 5_200_000] },
+  { brand: "Lexus", model: "RX", trim: "RX 500h", color: "Plata", photos: ["1702757329688-073f16ff8893", "1702757329647-f628b9ff2262"], minYear: 2023, price: [5_000_000, 6_000_000] },
+  { brand: "Lexus", model: "RX", trim: "RX 350", color: "Negro", photos: ["1664427356346-c31b46248e71"], minYear: 2017, price: [2_400_000, 3_400_000] },
+  { brand: "Lexus", model: "RX", trim: "RX 350", color: "Blanco", photos: ["1698122660398-c4926f451314"], minYear: 2018, price: [2_700_000, 3_600_000] },
+  { brand: "Lexus", model: "LX", color: "Blanco", photos: ["1669691101370-9ee9ee0782dc", "1570523986973-787a8f2c004b"], minYear: 2016, price: [5_500_000, 8_500_000] },
 ];
+
+// ---------- Vistas 360 de demostración ----------
+// Renders del "Car Concept" de Khronos (CC BY 4.0, créditos en public/demo-360/CREDITS.txt) en dos colores:
+// 96 cuadros del giro, el giro en video (9 s por vuelta) y el panorama del interior. No es el modelo del
+// anuncio: muestran la función en las jeepetas de estas marcas, con el color más parecido.
+const DEMO_360_BRANDS = ["Mercedes-Benz", "Lexus"];
+// Color del render según el color del anuncio; los demás colores usan grafito.
+const DEMO_360_COLORS: Record<string, string[]> = {
+  perla: ["Blanco", "Plata", "Beige"],
+  grafito: ["Gris", "Negro", "Azul", "Verde"],
+};
+const demo360 = (color: string) => ({
+  spinFrames: Array.from({ length: 96 }, (_, i) => `/demo-360/${color}/spin/${String(i).padStart(2, "0")}.webp`),
+  spinVideo: `/demo-360/${color}/spin.mp4`,
+  interiorPano: `/demo-360/${color}/interior.webp`,
+});
 
 const COVERS = ["1543465077-db45d34b88a5", "1617788138017-80ad40651399", "1583121274602-3e2820c69888", "1590362891991-f776e747a588"];
 
@@ -552,7 +580,38 @@ async function main() {
     }
   }
 
-  console.log(`Seed listo: ${BRANDS.length} marcas, ${DEALERS.length} dealers, ${features.length} características, ${count} vehículos.`);
+  // Vista 360 en las jeepetas de DEMO_360_BRANDS. Una de cada marca encabeza los destacados de la
+  // portada; si a su dealer ya no le quedan destacados en el plan, cede el más antiguo para no pasarse del cupo.
+  const suvs = await db.vehicle.findMany({
+    where: { dealerId: { not: null }, bodyType: "JEEPETA", model: { brand: { name: { in: DEMO_360_BRANDS } } } },
+    orderBy: { priceDop: "desc" },
+    select: { id: true, extColor: true, dealerId: true, featuredUntil: true, model: { select: { brand: { select: { name: true } } } } },
+  });
+  const colorOf = (ext: string | null) => Object.entries(DEMO_360_COLORS).find(([, names]) => ext && names.includes(ext))?.[0] ?? "grafito";
+  // La más cara de cada marca, de otro color que la anterior para que los dos destacados se distingan.
+  const leads: typeof suvs = [];
+  for (const brand of DEMO_360_BRANDS) {
+    const pool = suvs.filter((v) => v.model.brand.name === brand);
+    const v = pool.find((p) => !leads.some((l) => colorOf(l.extColor) === colorOf(p.extColor))) ?? pool[0];
+    if (v) leads.push(v);
+  }
+  for (const v of suvs) await db.vehicle.update({ where: { id: v.id }, data: demo360(colorOf(v.extColor)) });
+  for (const v of leads) {
+    if (!v.featuredUntil) {
+      const left = featuredLeft.get(v.dealerId!) ?? 0;
+      if (left > 0) featuredLeft.set(v.dealerId!, left - 1);
+      else {
+        const oldest = await db.vehicle.findFirst({
+          where: { dealerId: v.dealerId, featuredUntil: { not: null }, id: { notIn: leads.map((l) => l.id) } },
+          orderBy: { createdAt: "asc" },
+        });
+        if (oldest) await db.vehicle.update({ where: { id: oldest.id }, data: { featuredUntil: null } });
+      }
+    }
+    await db.vehicle.update({ where: { id: v.id }, data: { featuredUntil: new Date(in30.getTime() + 86_400_000) } });
+  }
+
+  console.log(`Seed listo: ${BRANDS.length} marcas, ${DEALERS.length} dealers, ${features.length} características, ${count} vehículos (${suvs.length} con vista 360).`);
 }
 
 main()

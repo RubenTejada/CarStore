@@ -11,11 +11,19 @@ import { PROVINCE_NAMES } from "@/lib/provinces";
 import { slugify, toDop } from "@/lib/labels";
 import { getUsdRate } from "@/lib/exchange-rate";
 import { BodyType, Condition, Currency, Drivetrain, Fuel, Transmission, VehicleStatus } from "@/generated/prisma/enums";
+import { SPIN_MAX_FRAMES, SPIN_MIN_FRAMES } from "@/lib/labels";
 import type { FormState } from "./auth";
 
+// Fotos subidas, las de Unsplash del seed y las vistas 360 de demostración (public/demo-360).
 const photoUrl = z
   .string()
-  .refine((u) => /^\/uploads\/\d{4}-\d{2}\/[a-f0-9]{24}\.webp$/.test(u) || u.startsWith("https://images.unsplash.com/"), "Foto inválida");
+  .refine(
+    (u) =>
+      /^\/uploads\/\d{4}-\d{2}\/[a-f0-9]{24}\.webp$/.test(u) ||
+      /^\/demo-360\/[a-z]+\/(spin\/\d{2}|interior)\.webp$/.test(u) ||
+      u.startsWith("https://images.unsplash.com/"),
+    "Foto inválida",
+  );
 
 const optionalText = (max: number) =>
   z
@@ -53,6 +61,11 @@ const vehicleSchema = z.object({
   lat: z.coerce.number().min(17.3).max(20.1, "La ubicación debe estar en República Dominicana"),
   lng: z.coerce.number().min(-72.1).max(-68.2, "La ubicación debe estar en República Dominicana"),
   photos: z.array(photoUrl).max(30, "Máximo 30 fotos"),
+  spinFrames: z
+    .array(photoUrl)
+    .max(SPIN_MAX_FRAMES, `El giro 360 admite hasta ${SPIN_MAX_FRAMES} fotos`)
+    .refine((f) => f.length === 0 || f.length >= SPIN_MIN_FRAMES, `El giro 360 necesita al menos ${SPIN_MIN_FRAMES} fotos`),
+  interiorPano: z.union([z.literal("").transform(() => null), photoUrl]),
   features: z.array(z.string()).max(80),
   featured: z.boolean(),
   intent: z.enum(["draft", "publish"]),
@@ -61,7 +74,7 @@ const vehicleSchema = z.object({
 const sellerOnly = () => requireUser("DEALER", "SELLER", "ADMIN");
 
 async function loadEditable(user: CurrentUser, id: string) {
-  const vehicle = await db.vehicle.findUnique({ where: { id }, select: { id: true, ownerId: true, dealerId: true, status: true, featuredUntil: true } });
+  const vehicle = await db.vehicle.findUnique({ where: { id }, select: { id: true, ownerId: true, dealerId: true, status: true, featuredUntil: true, spinFrames: true } });
   if (!vehicle || !canEditVehicle(user, vehicle)) return null;
   return vehicle;
 }
@@ -71,8 +84,10 @@ export async function saveVehicle(id: string | null, _: FormState, form: FormDat
   const parsed = vehicleSchema.safeParse({
     trimId: "",
     trim: "",
-    ...Object.fromEntries([...form.entries()].filter(([k]) => k !== "photos" && k !== "features")),
+    interiorPano: "",
+    ...Object.fromEntries([...form.entries()].filter(([k]) => k !== "photos" && k !== "spinFrames" && k !== "features")),
     photos: form.getAll("photos"),
+    spinFrames: form.getAll("spinFrames"),
     features: form.getAll("features"),
     featured: form.get("featured") === "on",
   });
@@ -133,6 +148,10 @@ export async function saveVehicle(id: string | null, _: FormState, form: FormDat
     province: d.province,
     lat: d.lat,
     lng: d.lng,
+    spinFrames: d.spinFrames,
+    // El video del giro se hizo con los cuadros anteriores: si cambian, deja de corresponder.
+    ...(existing?.spinFrames.join() !== d.spinFrames.join() && { spinVideo: null }),
+    interiorPano: d.interiorPano,
     status: activate ? VehicleStatus.ACTIVE : VehicleStatus.DRAFT,
     featuredUntil,
   };
