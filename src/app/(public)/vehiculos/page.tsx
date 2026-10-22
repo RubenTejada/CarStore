@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { LayoutGrid, Map as MapIcon, SlidersHorizontal, X } from "lucide-react";
 import { db } from "@/lib/db";
-import { getBrowseCatalog, type BrowseBrand } from "@/lib/catalog";
+import { getBrowseCatalog, getSearchIndex, type BrowseBrand } from "@/lib/catalog";
+import { prepareIndex, resolveFreeText } from "@/lib/search-suggest";
 import { getFacets, searchMapPoints, searchVehicles } from "@/lib/search";
 import { parseSearchParams, toQueryString, type SearchFilters } from "@/lib/search-params";
 import { BODY_TYPE_LABEL, CONDITION_LABEL, DRIVETRAIN_LABEL, FUEL_LABEL, TRANSMISSION_LABEL, formatKm, formatPrice } from "@/lib/labels";
@@ -23,6 +25,13 @@ export default async function VehiclesPage({ searchParams }: PageProps<"/vehicul
   const raw = await searchParams;
   const f = parseSearchParams(raw);
   const mapMode = f.vista === "mapa";
+  const values = Object.fromEntries(
+    new URLSearchParams(toQueryString(f).slice(1)).entries(),
+  ) as Record<string, string>;
+  if (f.q) {
+    const href = resolveFreeText(prepareIndex(await getSearchIndex()), values);
+    if (href) redirect(href);
+  }
 
   const [result, facets, brands, features, points, modelTrims] = await Promise.all([
     searchVehicles(f),
@@ -44,9 +53,6 @@ export default async function VehiclesPage({ searchParams }: PageProps<"/vehicul
   const heading = [f.condicion && CONDITION_LABEL[f.condicion] + "s", f.tipo ? BODY_TYPE_LABEL[f.tipo] : null, brandName, modelName, trimName].filter(Boolean).join(" ") || "Todos los vehículos";
 
   const chips = activeChips(f, { brandName, modelName, trimName, features });
-  const values = Object.fromEntries(
-    new URLSearchParams(toQueryString(f).slice(1)).entries(),
-  ) as Record<string, string>;
   const qs = toQueryString(f);
 
   return (

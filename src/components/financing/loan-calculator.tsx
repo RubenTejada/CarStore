@@ -141,7 +141,7 @@ export function LoanCalculator({ offers, price: initialPrice, condition: initial
 
       <div>
         {ranked.length ? (
-          <ol className="grid gap-3">
+          <ol className="grid gap-3 md:grid-cols-2">
             {shown.map((o, i) => {
               const needsDown = o.maxFinancingPct !== null && 100 - downPct > o.maxFinancingPct;
               const tooLong = o.maxTermMonths !== null && term > o.maxTermMonths;

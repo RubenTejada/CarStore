@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyPicked, parseQuery, prepareIndex, suggest, type SearchIndex } from "./search-suggest";
+import { applyPicked, parseQuery, prepareIndex, resolveFreeText, suggest, type SearchIndex } from "./search-suggest";
 
 const index: SearchIndex = {
   brands: [
@@ -58,7 +58,7 @@ describe("parseQuery", () => {
   });
 
   it("leaves the word being typed (and trailing unknown words) to be completed", () => {
-    expect(parseQuery(ix, "toyota cor")).toEqual({ picked: { marca: "toyota" }, tail: ["cor"] });
+    expect(parseQuery(ix, "toyota cor")).toEqual({ picked: { marca: "toyota" }, tail: ["cor"], unmatched: [] });
     expect(parseQuery(ix, "range rover sp").tail).toEqual(["range", "rover", "sp"]);
   });
 });
@@ -82,6 +82,14 @@ describe("suggest", () => {
     expect(suggest(ix, "honda diesel ").map((x) => x.kind)).toEqual(["text"]);
   });
 
+  it("only falls back to look-alikes when nothing matches for real", () => {
+    // "toyot" se parece a "todot(erreno)", pero Toyota ya coincide.
+    expect(suggest(ix, "toyot").map((x) => x.kind)).not.toContain("type");
+    // Una versión por parecido exige su modelo: "touing" solo no es el CR-V Touring.
+    expect(suggest(ix, "touing").map((x) => x.kind)).toEqual(["text"]);
+    expect(first("cr-v touing")).toMatchObject({ kind: "trim", title: "Honda CR-V Touring" });
+  });
+
   it("finds trims without a model from 3 letters", () => {
     expect(first("limi")).toMatchObject({ kind: "trim", title: "Toyota RAV4 Limited", href: "/vehiculos?marca=toyota&modelo=rav4&version=limited" });
   });
@@ -98,6 +106,20 @@ describe("suggest", () => {
 
   it("suggests the models with most stock for an empty query", () => {
     expect(suggest(ix, "").map((x) => x.title)).toEqual(["Toyota Corolla", "Toyota RAV4", "Ford F-150", "Honda CR-V", "Land Rover Range Rover Sport"]);
+  });
+});
+
+describe("resolveFreeText", () => {
+  it("turns submitted text into filters and keeps only unknown words as q", () => {
+    expect(resolveFreeText(ix, { q: "jeepeta toyota 2019" })).toBe("/vehiculos?tipo=jeepeta&marca=toyota&anioMin=2019&anioMax=2019");
+    expect(resolveFreeText(ix, { q: "honda crv blanca", condicion: "usado", orden: "precio-asc" })).toBe(
+      "/vehiculos?q=blanca&condicion=usado&marca=honda&modelo=cr-v&orden=precio-asc",
+    );
+  });
+
+  it("leaves text it cannot read as is", () => {
+    expect(resolveFreeText(ix, { q: "mitsubishi l200" })).toBeNull();
+    expect(resolveFreeText(ix, { marca: "toyota" })).toBeNull();
   });
 });
 

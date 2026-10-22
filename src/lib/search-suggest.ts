@@ -216,7 +216,8 @@ const closePrefix = (s: string, key: string) => {
 /** Las versiones de catálogo solo se reconocen solas dentro de un modelo ("RAV4 limited"); sin modelo, desde 3 letras. */
 const trimAllowed = (t: Term, picked: Filters, s: string) => t.kind !== "trim" || picked.modelo !== undefined || s.length >= 3;
 
-type Parsed = { picked: Filters; tail: string[] };
+/** `tail`: lo que queda al final por completar; `unmatched`: todas las palabras terminadas sin reconocer. */
+type Parsed = { picked: Filters; tail: string[]; unmatched: string[] };
 
 /**
  * Lee el texto de izquierda a derecha reconociendo términos completos (también los que ocupan
@@ -278,7 +279,20 @@ export function parseQuery(ix: PreparedIndex, query: string): Parsed {
 
   let start = head.length;
   while (start > 0 && !used[start - 1]) start--;
-  return { picked, tail: [...head.slice(start), ...(typing ? [words.at(-1)!] : [])] };
+  return { picked, tail: [...head.slice(start), ...(typing ? [words.at(-1)!] : [])], unmatched: head.filter((_, i) => !used[i]) };
+}
+
+/**
+ * Texto libre enviado tal cual (Enter antes de que cargue el índice, sin JS o «Buscar “…”»): se
+ * convierte en los mismos filtros que reconoce el autocompletado y solo las palabras sin reconocer
+ * siguen como `q`. Devuelve la URL a la que redirigir, o `null` si no reconoce nada.
+ */
+export function resolveFreeText(ix: PreparedIndex, params: Record<string, string>): string | null {
+  if (!params.q) return null;
+  const { picked, unmatched } = parseQuery(ix, `${params.q} `);
+  if (!Object.keys(picked).length) return null;
+  const { filters, rest } = fromParams(params);
+  return toHref(applyPicked(filters, picked), rest, unmatched.join(" ") || undefined);
 }
 
 /** Parámetros de la URL actual → filtros contables + resto (precio, color…) que se conserva tal cual. */
@@ -332,7 +346,7 @@ export function toHref(f: Filters, rest: Record<string, string> = {}, q?: string
   return qs ? `/vehiculos?${qs}` : "/vehiculos";
 }
 
-type Candidate = { set: Filters; score: number };
+type Candidate = { set: Filters; score: number; fuzzy?: boolean };
 
 /** Qué es la sugerencia, según lo más específico que fija lo escrito (no los filtros heredados). */
 function kindOf(f: Filters): Kind {
@@ -361,13 +375,15 @@ function complete(ix: PreparedIndex, picked: Filters, tail: string[]): Candidate
       if (t.key === s) quality = 4;
       else if (t.key.startsWith(s)) quality = 3;
       else if (span === 1 && s.length >= 2 && t.words.slice(1).some((w) => w.startsWith(s))) quality = 2;
-      else if (closeEnough(s, t.key) || closePrefix(s, t.key)) quality = 1;
-      if (quality) out.push({ set: t.set, score: quality * 10 + t.weight + span * 2 });
+      // Una versión por parecido solo dentro de su modelo: sin él, "l200" daría el C 200 de Mercedes.
+      else if ((t.kind !== "trim" || picked.modelo) && (closeEnough(s, t.key) || closePrefix(s, t.key))) quality = 1;
+      if (quality) out.push({ set: t.set, score: quality * 10 + t.weight + span * 2, fuzzy: quality === 1 });
     }
     // Si la cola completa ya dio resultados, no se prueban colas más cortas.
     if (out.length) break;
   }
-  return out;
+  // Los parecidos solo cuando nada coincide de verdad: "toyot" es Toyota, no "todot(erreno)".
+  return out.some((c) => !c.fuzzy) ? out.filter((c) => !c.fuzzy) : out;
 }
 
 /** Hijos de una búsqueda para seguir afinando: versiones de un modelo, modelos de una marca o de un tipo. */
