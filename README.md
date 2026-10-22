@@ -67,10 +67,10 @@ src/components/map/         Google Maps, mapa esquemático y selector de ubicaci
 
 ## Reglas de negocio
 
-- Publicar requiere un plan activo con cupo; los dealers además deben estar aprobados.
+- Toda cuenta sin plan pagado está en el plan Gratis: hasta 5 vehículos publicados, sin destacados ni vencimiento (`FREE_PLAN` en `src/lib/listing-rules.ts`). Los planes pagados amplían el cupo; los dealers además deben estar aprobados para publicar.
 - Destacar consume los cupos de destacados del plan; los destacados salen en la portada.
 - Los planes se pagan por transferencia: el usuario envía la referencia y un administrador confirma el pago.
-- Al vencer un plan, sus vehículos se pausan (revisión automática cada 10 minutos al navegar).
+- Al vencer un plan pagado, la cuenta vuelve al plan Gratis: siguen publicados sus 5 vehículos más recientes, sin destacados, y el resto se pausa (revisión automática cada 10 minutos al navegar).
 - Las fotos se guardan en `uploads/` (disco local), convertidas a WebP.
 
 ## Vista 360

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BadgeCheck, MapPin } from "lucide-react";
 import { db } from "@/lib/db";
+import { FREE_PLAN } from "@/lib/listing-rules";
 import { getBrowseCatalog } from "@/lib/catalog";
 import { getFeaturedVehicles } from "@/lib/search";
 import { formatPrice } from "@/lib/labels";
@@ -154,6 +155,13 @@ export default async function HomePage() {
             </div>
           </div>
           <ul className="grid content-center gap-2 bg-black/15 p-6 sm:p-10">
+            <li className="flex items-baseline justify-between gap-4 rounded-lg bg-white/10 px-4 py-3">
+              <span>
+                <span className="font-bold">{FREE_PLAN.name}</span>
+                <span className="block text-sm opacity-75">{FREE_PLAN.maxActiveListings} vehículos, sin destacados, sin vencimiento</span>
+              </span>
+              <span className="wide text-lg font-extrabold whitespace-nowrap">RD$0</span>
+            </li>
             {plans.map((p) => (
               <li key={p.id} className="flex items-baseline justify-between gap-4 rounded-lg bg-white/10 px-4 py-3">
                 <span>

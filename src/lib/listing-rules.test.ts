@@ -40,8 +40,11 @@ describe("evaluatePublish", () => {
     expect(evaluatePublish(quota, change)).toBeNull();
   });
 
-  it("requires an active plan", () => {
-    expect(evaluatePublish({ ...quota, planName: null }, change)).toMatch(/plan activo/);
+  it("lets the free plan publish within its quota without featured slots", () => {
+    const free: Quota = { ...quota, planName: "Gratis", endsAt: null, maxActive: 5, usedActive: 4, featuredSlots: 0 };
+    expect(evaluatePublish(free, change)).toBeNull();
+    expect(evaluatePublish({ ...free, usedActive: 5 }, change)).toMatch(/Gratis permite 5 vehículos/);
+    expect(evaluatePublish(free, { ...change, featured: true })).toMatch(/no incluye/);
   });
 
   it("blocks publishing beyond the quota unless already active", () => {
@@ -61,7 +64,7 @@ describe("evaluatePublish", () => {
     expect(evaluatePublish(quota, { ...change, activate: false, featured: true })).toMatch(/publicado/);
   });
 
-  it("allows saving drafts without a plan", () => {
-    expect(evaluatePublish({ ...quota, planName: null }, { ...change, activate: false })).toBeNull();
+  it("allows saving drafts beyond the quota", () => {
+    expect(evaluatePublish({ ...quota, usedActive: 2 }, { ...change, activate: false })).toBeNull();
   });
 });

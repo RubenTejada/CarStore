@@ -36,24 +36,15 @@ export default async function PanelHome() {
         <Alert>Tu dealer está pendiente de aprobación. Puedes preparar vehículos como borrador mientras la administración lo revisa.</Alert>
       )}
       {quota.dealerStatus === "SUSPENDED" && <Alert>Tu dealer está suspendido. Contacta a la administración.</Alert>}
-      {!quota.planName && (
-        <Alert>
-          {pending ? "Tu solicitud de plan está pendiente de aprobación del pago." : "No tienes un plan activo. "}
-          {!pending && (
-            <Link href="/panel/planes" className="font-semibold underline">
-              Elige un plan para publicar
-            </Link>
-          )}
-        </Alert>
-      )}
+      {pending > 0 && <Alert>Tu solicitud de plan está pendiente de aprobación del pago.</Alert>}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Stat label="Publicados" value={`${quota.usedActive} / ${quota.maxActive}`} hint={quota.planName ? `Plan ${quota.planName}` : "Sin plan"} />
+        <Stat label="Publicados" value={`${quota.usedActive} / ${quota.maxActive}`} hint={`Plan ${quota.planName}`} />
         <Stat label="Destacados" value={`${quota.usedFeatured} / ${quota.featuredSlots}`} hint="En la portada" icon={<Star className="size-5 text-sun" aria-hidden />} />
         <Stat label="Visitas totales" value={(views._sum.views ?? 0).toLocaleString("es-DO")} hint="Todas tus publicaciones" icon={<Eye className="size-5 text-brand" aria-hidden />} />
         <Stat
           label="Plan vence"
-          value={quota.endsAt ? quota.endsAt.toLocaleDateString("es-DO", { day: "numeric", month: "short" }) : "—"}
+          value={quota.endsAt ? quota.endsAt.toLocaleDateString("es-DO", { day: "numeric", month: "short" }) : "Nunca"}
           hint={`${count("DRAFT")} borradores, ${count("PAUSED")} pausados, ${count("SOLD")} vendidos`}
         />
       </div>

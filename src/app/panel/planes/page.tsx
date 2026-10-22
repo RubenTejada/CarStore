@@ -18,9 +18,16 @@ export default async function MyPlan() {
   ]);
   return (
     <div className="max-w-4xl">
-      <PageTitle title="Mi plan" text={quota.planName ? `Plan ${quota.planName} activo hasta el ${fmt(quota.endsAt)}` : "No tienes un plan activo."} />
+      <PageTitle
+        title="Mi plan"
+        text={
+          quota.endsAt
+            ? `Plan ${quota.planName} activo hasta el ${fmt(quota.endsAt)}`
+            : `Estás en el plan ${quota.planName}: publica hasta ${quota.maxActive} vehículos sin costo.`
+        }
+      />
       <section className={`${card} p-6`}>
-        <h2 className="wide mb-4 text-lg font-bold">{quota.planName ? "Renovar o mejorar" : "Elegir un plan"}</h2>
+        <h2 className="wide mb-4 text-lg font-bold">{quota.endsAt ? "Renovar o mejorar" : "Mejorar mi plan"}</h2>
         <PlanRequestForm plans={plans} />
       </section>
       {subs.length > 0 && (
