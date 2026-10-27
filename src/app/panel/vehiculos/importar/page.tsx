@@ -44,7 +44,7 @@ export default async function ImportInventory() {
       <section className={cn(card, "p-5 sm:p-6")}>
         <h2 className="wide text-lg font-bold">Página de tu dealer en otro portal</h2>
         <p className="mt-0.5 text-sm text-muted">
-          Pega el enlace de la página donde aparece todo tu inventario (por ejemplo, tu perfil en SuperCarros). Cada vehículo se crea como <strong>borrador</strong>: revísalo y publícalo
+          Pega el enlace de la página donde aparece todo tu inventario en cualquier portal de venta de vehículos o en tu web. Cada vehículo se crea como <strong>borrador</strong>: revísalo y publícalo
           desde «Mis vehículos». Los que ya importaste antes se omiten.
         </p>
         <SimpleForm action={startInventoryImport} submit="Importar inventario" className="mt-5">
@@ -52,7 +52,7 @@ export default async function ImportInventory() {
             <label htmlFor="url" className={label}>
               Enlace del inventario
             </label>
-            <input id="url" name="url" type="url" required inputMode="url" placeholder="https://www.supercarros.com/Dealers/…" className={input} />
+            <input id="url" name="url" type="url" required inputMode="url" placeholder="https://…" className={input} />
           </div>
           <label className="flex items-start gap-2 text-sm text-muted">
             <input type="checkbox" name="owner" required className="mt-0.5 size-4 accent-[var(--brand)]" />

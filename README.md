@@ -96,7 +96,7 @@ Los datos de cada entidad (contacto, inicial y plazo máximo) se mantienen a man
 
 ## Importar desde otros portales
 
-En el panel, **Publicar vehículo** acepta el enlace de un anuncio en otro portal (SuperCarros, Corotos, la web de un dealer…) y llena el formulario con sus datos, características y fotos para revisarlo y publicarlo. Los dealers tienen además **Importar inventario**: con el enlace de su página en otro portal se recorre el listado (con su paginación) y cada vehículo se crea como borrador.
+En el panel, **Publicar vehículo** acepta el enlace de un anuncio en cualquier portal de venta de vehículos o en la web de un dealer y llena el formulario con sus datos, características y fotos para revisarlo y publicarlo. Los dealers tienen además **Importar inventario**: con el enlace de su página en otro portal se recorre el listado (con su paginación) y cada vehículo se crea como borrador.
 
 - La página se descarga en el servidor (`src/lib/safe-fetch.ts`: solo http(s) públicos; se rechazan IPs privadas, también tras redirecciones) y Claude extrae los datos con salida estructurada contra el catálogo (`src/lib/listing-import.ts`, partes puras en `src/lib/listing-parse.ts`). Las fotos se copian a `uploads/` como WebP.
 - Marca y modelo deben existir en el catálogo; si no, el anuncio individual pide elegirlos y el inventario lo marca con error. Cada vehículo guarda su `sourceUrl`, así un anuncio no se importa dos veces.

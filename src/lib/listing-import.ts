@@ -21,7 +21,7 @@ import {
 } from "@/lib/listing-parse";
 
 /**
- * Importación de anuncios desde otros portales (SuperCarros, Corotos, la web de un dealer…).
+ * Importación de anuncios desde cualquier portal de venta de vehículos o la web de un dealer.
  * Cada portal tiene su propio formato, así que se descarga la página y Claude la lee con salida
  * estructurada contra el catálogo del portal; aquí se validan los valores y se copian las fotos
  * a `uploads/`. Solo lee el HTML que entrega el servidor: las páginas que se arman por completo

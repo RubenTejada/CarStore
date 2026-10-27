@@ -25,13 +25,13 @@ export function ListingImporter(props: VehicleFormProps) {
           <Link2 className="size-5 text-brand" aria-hidden />
           ¿Ya lo tienes publicado en otro portal?
         </h2>
-        <p className="mt-0.5 text-sm text-muted">Pega el enlace del anuncio (SuperCarros, Corotos, la web de tu dealer…) y llenamos el formulario con sus datos, características y fotos.</p>
+        <p className="mt-0.5 text-sm text-muted">Pega el enlace del anuncio en cualquier portal de venta de vehículos o en la web de tu dealer y llenamos el formulario con sus datos, características y fotos.</p>
         <form onSubmit={onSubmit} className="mt-4 space-y-3">
           <div className="flex flex-col gap-2 sm:flex-row">
             <label htmlFor="import-url" className="sr-only">
               Enlace del anuncio
             </label>
-            <input id="import-url" name="url" type="url" required inputMode="url" placeholder="https://www.supercarros.com/…" className={cn(input, "sm:flex-1")} />
+            <input id="import-url" name="url" type="url" required inputMode="url" placeholder="https://…" className={cn(input, "sm:flex-1")} />
             <button type="submit" disabled={pending} className={button("brand")}>
               {pending && <LoaderCircle className="size-4 animate-spin" aria-hidden />}
               {pending ? "Importando…" : "Importar"}
