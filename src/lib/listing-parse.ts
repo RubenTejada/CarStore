@@ -15,13 +15,16 @@ const MAX_IMAGES = 150;
 const MAX_LINKS = 400;
 export const MAX_PHOTOS = 30;
 
-/** Respuesta de Claude para la página de un anuncio. */
+/**
+ * Respuesta de Claude para la página de un anuncio. La API admite como máximo 16 campos con tipo
+ * unión (`nullable`): los textos sin dato llegan vacíos en vez de null.
+ */
 export const ListingExtraction = z.object({
   isVehicleListing: z.boolean().describe("true si la página es el anuncio de UN vehículo en venta (carro, jeepeta, camioneta…)."),
   title: z.string().describe("Título del anuncio tal como aparece."),
-  brand: z.string().nullable().describe("Marca. Si está en el catálogo, el nombre exacto del catálogo."),
-  model: z.string().nullable().describe("Modelo. Si está en el catálogo, el nombre exacto del catálogo para esa marca."),
-  trim: z.string().nullable().describe("Versión o edición (LX, Limited, Sport…), sin repetir marca ni modelo; null si no se indica."),
+  brand: z.string().describe("Marca. Si está en el catálogo, el nombre exacto del catálogo."),
+  model: z.string().describe("Modelo. Si está en el catálogo, el nombre exacto del catálogo para esa marca."),
+  trim: z.string().describe("Versión o edición (LX, Limited, Sport…), sin repetir marca ni modelo; vacío si no se indica."),
   year: z.number().int().nullable(),
   condition: z.enum(Condition).nullable().describe("NEW si es nuevo / 0 km; USED si es usado."),
   price: z.number().nullable().describe("Precio de venta (no la inicial ni la cuota mensual), sin separadores."),
@@ -32,14 +35,14 @@ export const ListingExtraction = z.object({
   transmission: z.enum(Transmission).nullable(),
   fuel: z.enum(Fuel).nullable().describe("GLP si es a gas."),
   drivetrain: z.enum(Drivetrain).nullable().describe("FWD delantera, RWD trasera, AWD integral, FOUR_WD 4x4."),
-  engine: z.string().nullable().describe("Motor, corto: «2.0L 4 cil. turbo»."),
-  extColor: z.string().nullable().describe("Color exterior en español, con mayúscula inicial («Gris»)."),
-  intColor: z.string().nullable().describe("Color interior en español, con mayúscula inicial."),
+  engine: z.string().describe("Motor, corto: «2.0L 4 cil. turbo»."),
+  extColor: z.string().describe("Color exterior en español, con mayúscula inicial («Gris»)."),
+  intColor: z.string().describe("Color interior en español, con mayúscula inicial."),
   doors: z.number().int().nullable(),
   seats: z.number().int().nullable().describe("Pasajeros."),
-  description: z.string().nullable().describe("Descripción escrita por el vendedor, copiada tal cual (sin datos de contacto); null si no hay."),
+  description: z.string().describe("Descripción escrita por el vendedor, copiada tal cual (sin datos de contacto); vacío si no hay."),
   features: z.array(z.string()).describe("Claves de la lista de características que el anuncio menciona."),
-  province: z.string().nullable().describe("Provincia de la lista donde está el vehículo; null si no se indica."),
+  province: z.string().describe("Provincia de la lista donde está el vehículo; vacío si no se indica."),
   photos: z.array(z.number().int()).describe("Números de las imágenes candidatas que son fotos de ESTE vehículo, en el orden de la galería, cada foto una sola vez en su mayor tamaño."),
 });
 export type ListingExtraction = z.infer<typeof ListingExtraction>;
@@ -136,7 +139,7 @@ export function pickLinks(x: InventoryExtraction, links: string[]) {
 const compact = (s: string) => slugify(s).replace(/-/g, "");
 
 /** Marca y modelo del catálogo para los nombres extraídos (sin distinguir guiones, espacios ni acentos). */
-export function matchModel(brands: CatalogBrand[], brandName: string | null, modelName: string | null) {
+export function matchModel(brands: CatalogBrand[], brandName: string, modelName: string) {
   if (!brandName) return null;
   const b = compact(brandName);
   const brand = brands.find((x) => compact(x.name) === b || x.slug.replace(/-/g, "") === b);
@@ -179,7 +182,7 @@ export type ImportedListing = {
   photoUrls: string[];
 };
 
-const text = (v: string | null, max: number) => v?.trim().slice(0, max) || null;
+const text = (v: string, max: number) => v?.trim().slice(0, max) || null;
 const intIn = (v: number | null, min: number, max: number) => (v !== null && Number.isFinite(v) && v >= min && v <= max ? Math.round(v) : null);
 
 /** Lleva la extracción al formato del portal, con los rangos que valida `saveVehicle`. */

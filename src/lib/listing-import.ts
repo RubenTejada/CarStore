@@ -42,7 +42,7 @@ function claude() {
 
 const LISTING_PROMPT = `Arriba está la página de un anuncio de otro portal de vehículos de República Dominicana.
 Extrae los datos del vehículo para publicarlo en nuestro portal:
-- Usa solo lo que dice la página; si un dato no aparece, null. No inventes ni estimes.
+- Usa solo lo que dice la página; si un dato no aparece, null (en los textos, vacío). No inventes ni estimes.
 - Marca y modelo: si están en el catálogo, escribe los nombres exactos del catálogo (p. ej. «CRV» → «CR-V»); si no, como los escribe el anuncio.
 - Ignora los anuncios similares, recomendados o del resto del inventario que salgan en la página.
 - Fotos: solo las del vehículo anunciado (no logos, banners ni miniaturas de otros anuncios).`;

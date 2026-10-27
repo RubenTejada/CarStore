@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 import { decodeEntities, pageImages, pageLinks } from "./html";
-import { canonicalUrl, inventoryDigest, listingDigest, matchModel, normalizeListing, pickLinks, type CatalogBrand, type ListingExtraction } from "./listing-parse";
+import { InventoryExtraction, ListingExtraction, canonicalUrl, inventoryDigest, listingDigest, matchModel, normalizeListing, pickLinks, type CatalogBrand } from "./listing-parse";
 
 const brands: CatalogBrand[] = [
   {
@@ -128,7 +129,7 @@ describe("normalizeListing", () => {
     intColor: "Negro",
     doors: 4,
     seats: 5,
-    description: null,
+    description: "",
     features: ["apple-carplay", "inventada"],
     province: "Distrito Nacional",
     photos: [2, 0, 2, 99],
@@ -155,5 +156,13 @@ describe("normalizeListing", () => {
   it("descarta valores fuera de rango y usa valores por defecto", () => {
     const l = normalizeListing({ ...base, model: "Pilot", year: 1800, price: 50, doors: 9, province: "Narnia", condition: null, transmission: null, bodyType: "PICKUP" }, ctx, 2026);
     expect(l).toMatchObject({ modelId: null, modelLabel: "Honda Pilot", year: null, price: null, doors: null, province: null, condition: "USED", transmission: "AUTOMATIC", bodyType: "PICKUP", trimId: null, trim: "lx" });
+  });
+});
+
+describe("esquemas de extracción", () => {
+  // La API rechaza los esquemas con más de 16 campos con tipo unión (anyOf o lista de tipos).
+  it.each([["anuncio", ListingExtraction], ["inventario", InventoryExtraction]])("%s no pasa del límite de uniones", (_, schema) => {
+    const props = Object.values((z.toJSONSchema(schema) as { properties: Record<string, { anyOf?: unknown; type?: unknown }> }).properties);
+    expect(props.filter((p) => p.anyOf || Array.isArray(p.type)).length).toBeLessThanOrEqual(16);
   });
 });
