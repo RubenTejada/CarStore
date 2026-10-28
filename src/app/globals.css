@@ -790,66 +790,78 @@ body {
 }
 
 /*
- * Logo: al cargar, el bloque TC entra derrapando desde la izquierda; las líneas de velocidad
- * se estiran detrás y el nombre aparece. Al pasar el mouse el bloque acelera y las líneas se alargan.
- * La entrada usa `backwards` (no `forwards`) para que al terminar manden las transiciones del hover.
+ * Silueta dinámica: el perfil se revela de izquierda a derecha y el nombre entra después.
+ * Hover y foco aceleran el conjunto; el aro de la O gira solo durante el hover.
  */
-@keyframes logo-block-in {
-  0% {
-    opacity: 0;
-    transform: translateX(-45%);
-  }
-  65% {
-    opacity: 1;
-    transform: translateX(6%);
-  }
-  100% {
-    transform: none;
-  }
-}
-@keyframes logo-line-in {
+@keyframes logo-silhouette-in {
   from {
     opacity: 0;
-    transform: scaleX(0);
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    opacity: 1;
+    clip-path: inset(0);
   }
 }
 @keyframes logo-word-in {
   from {
     opacity: 0;
-    transform: translateX(-10px);
+    transform: translateX(-5%);
   }
 }
-.logo .logo-line {
+@keyframes logo-wheel-roll {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.logo .logo-wheel-spin {
   transform-box: fill-box;
-  transform-origin: right center;
-  transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) calc(var(--i) * 45ms);
+  transform-origin: center;
+  animation: logo-wheel-roll 0.65s linear infinite reverse;
+  animation-play-state: paused;
 }
-.logo .logo-block {
+.logo:hover .logo-wheel-spin {
+  animation-play-state: running;
+}
+.logo .logo-silhouette,
+.logo .logo-word,
+.logo .logo-tag {
   transform-box: fill-box;
-  transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transform-origin: center;
+  transition: transform 0.5s cubic-bezier(0.2, 0.9, 0.2, 1.25);
 }
-.logo:hover .logo-line,
-.logo:focus-visible .logo-line {
-  transform: translateX(-18%) scaleX(1.35);
+.logo .logo-tag {
+  transition-delay: 50ms;
 }
-.logo:hover .logo-block,
-.logo:focus-visible .logo-block {
-  transform: translateX(5%);
+.logo:is(:hover, :focus-visible) .logo-silhouette {
+  transform: translate(6%, -3%) scaleX(1.04);
 }
-.logo-intro .logo-block {
-  animation: logo-block-in 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.1s backwards;
+.logo:is(:hover, :focus-visible) .logo-word {
+  transform: translateX(2%) scale(1.025);
 }
-.logo-intro .logo-line {
-  animation: logo-line-in 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) calc(0.45s + var(--i) * 80ms) backwards;
+.logo:is(:hover, :focus-visible) .logo-tag {
+  transform: translateX(3.5%);
+}
+.logo-intro .logo-silhouette {
+  animation: logo-silhouette-in 0.75s cubic-bezier(0.2, 0.8, 0.2, 1) 0.1s backwards;
 }
 .logo-intro .logo-word {
-  animation: logo-word-in 0.45s ease-out 0.4s backwards;
+  animation: logo-word-in 0.5s ease-out 0.35s backwards;
 }
 .logo-intro .logo-tag {
-  animation: logo-word-in 0.45s ease-out 0.55s backwards;
+  animation: logo-word-in 0.45s ease-out 0.5s backwards;
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .logo .logo-silhouette,
+  .logo .logo-word,
+  .logo .logo-tag,
+  .logo .logo-wheel-spin {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+    clip-path: none !important;
+  }
   .logo-intro *,
   .scene-item,
   .scene-layer,
