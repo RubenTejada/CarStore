@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
+import { Check } from "lucide-react";
 import { register } from "@/app/actions/auth";
 import { button, input, label } from "@/components/ui/styles";
 import { cn } from "@/lib/cn";
@@ -16,7 +18,7 @@ export function RegisterForm({ defaultKind, provinces, next }: { defaultKind: "p
       {next && <input type="hidden" name="siguiente" value={next} />}
       <fieldset>
         <legend className={label}>Tipo de cuenta</legend>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           {(
             [
               ["comprador", "Comprador", "Guardo vehículos y recibo alertas"],
@@ -24,10 +26,22 @@ export function RegisterForm({ defaultKind, provinces, next }: { defaultKind: "p
               ["dealer", "Dealer", "Tengo un negocio de vehículos"],
             ] as const
           ).map(([value, title, text]) => (
-            <label key={value} className={cn("cursor-pointer rounded-lg border p-3", kind === value ? "border-brand bg-brand/10" : "border-line bg-surface")}>
-              <input type="radio" name="kind" value={value} checked={kind === value} onChange={() => setKind(value)} className="sr-only" />
-              <span className="block font-bold">{title}</span>
-              <span className="text-sm text-muted">{text}</span>
+            <label key={value} className="group block cursor-pointer">
+              <input type="radio" name="kind" value={value} checked={kind === value} onChange={() => setKind(value)} className="peer sr-only" />
+              <span className={cn("flex h-full overflow-hidden rounded-xl border transition-colors peer-focus-visible:outline-2 peer-focus-visible:outline-offset-4 peer-focus-visible:outline-accent sm:flex-col", kind === value ? "border-brand bg-brand/5" : "border-line bg-surface group-hover:border-muted")}>
+                <span className="relative block h-24 w-28 shrink-0 bg-[#edf3fb] sm:aspect-[3/2] sm:h-auto sm:w-full">
+                  <Image src={`/registration/${value}.webp`} alt="" fill sizes="(min-width: 640px) 195px, 112px" className="object-contain" />
+                </span>
+                <span className="block flex-1 p-3">
+                  <span className="flex items-center justify-between gap-2 font-bold">
+                    {title}
+                    <span aria-hidden="true" className={cn("flex size-5 shrink-0 items-center justify-center rounded-full border", kind === value ? "border-brand bg-brand text-brand-ink" : "border-line")}>
+                      {kind === value && <Check className="size-3.5" strokeWidth={3} />}
+                    </span>
+                  </span>
+                  <span className="mt-1 block text-sm leading-snug text-muted">{text}</span>
+                </span>
+              </span>
             </label>
           ))}
         </div>
