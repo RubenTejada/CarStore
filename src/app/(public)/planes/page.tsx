@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import Link from "next/link";
 import { Check } from "lucide-react";
 import { db } from "@/lib/db";
@@ -9,7 +10,7 @@ import { button } from "@/components/ui/styles";
 import { cn } from "@/lib/cn";
 import { PageHeader } from "@/components/layout/page-header";
 
-export const metadata: Metadata = { title: "Planes para publicar" };
+export const metadata: Metadata = pageMetadata({ path: "/planes", title: "Planes para publicar y vender tu carro", description: "Publica tu carro en TuCarroOnline. Conoce los planes para vendedores particulares y dealers en República Dominicana y las opciones para destacar tus vehículos." });
 
 export default async function PlansPage() {
   const [plans, user] = await Promise.all([db.plan.findMany({ where: { active: true }, orderBy: [{ forDealers: "asc" }, { priceDop: "asc" }] }), getCurrentUser()]);

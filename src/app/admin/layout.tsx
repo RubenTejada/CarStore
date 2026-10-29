@@ -16,7 +16,7 @@ const ITEMS: NavItem[] = [
   { href: "/admin/planes", label: "Planes", icon: <CreditCard className="size-4.5" aria-hidden /> },
 ];
 
-export const metadata = { title: "Administración" };
+export const metadata = { title: "Administración", robots: { index: false, follow: false } };
 
 export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
   const user = await requireUser("ADMIN");

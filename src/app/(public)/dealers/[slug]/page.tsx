@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { cache } from "react";
+import { browseMetadata, NO_INDEX } from "@/lib/seo";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BadgeCheck, Clock, ExternalLink, Globe, Mail, MapPin, MessageCircle, Phone } from "lucide-react";
@@ -15,11 +17,12 @@ import { BodySilhouette } from "@/components/browse/body-silhouette";
 import { button } from "@/components/ui/styles";
 import { cn } from "@/lib/cn";
 
-const getDealer = (slug: string) => db.dealer.findUnique({ where: { slug } });
+const getDealer = cache((slug: string) => db.dealer.findUnique({ where: { slug } }));
 
-export async function generateMetadata({ params }: PageProps<"/dealers/[slug]">): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: PageProps<"/dealers/[slug]">): Promise<Metadata> {
   const d = await getDealer((await params).slug);
-  return d?.status === "APPROVED" ? { title: `${d.name}: vehículos en ${d.province}`, description: d.description ?? undefined } : { title: "Dealer no disponible" };
+  if (d?.status !== "APPROVED") return { title: "Dealer no disponible", robots: NO_INDEX };
+  return browseMetadata(`/dealers/${d.slug}`, await searchParams, `${d.name}: vehículos en ${d.province}`, d.description?.trim() || `Conoce el inventario de ${d.name} en ${d.province}, República Dominicana. Consulta fotos, precios y características de sus vehículos en TuCarroOnline.`);
 }
 
 export default async function DealerPage({ params, searchParams }: PageProps<"/dealers/[slug]">) {

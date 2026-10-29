@@ -5,7 +5,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { PROVINCE_NAMES } from "@/lib/provinces";
 import { RegisterForm } from "@/components/forms/register-form";
 
-export const metadata: Metadata = { title: "Crear cuenta" };
+export const metadata: Metadata = { title: "Crear cuenta", robots: { index: false, follow: true } };
 
 export default async function RegisterPage({ searchParams }: PageProps<"/registro">) {
   if (await getCurrentUser()) redirect("/panel");

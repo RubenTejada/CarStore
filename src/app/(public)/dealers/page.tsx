@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import Link from "next/link";
 import { BadgeCheck, MapPin, Phone } from "lucide-react";
 import { db } from "@/lib/db";
@@ -8,7 +9,7 @@ import { MapView } from "@/components/map/map-view";
 import { input } from "@/components/ui/styles";
 import { PageHeader } from "@/components/layout/page-header";
 
-export const metadata: Metadata = { title: "Dealers" };
+export const metadata: Metadata = pageMetadata({ path: "/dealers", title: "Dealers de vehículos en República Dominicana", description: "Encuentra dealers de carros en República Dominicana. Consulta sus inventarios, precios, ubicaciones y datos de contacto en TuCarroOnline." });
 
 export default async function DealersPage({ searchParams }: PageProps<"/dealers">) {
   const sp = await searchParams;
