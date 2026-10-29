@@ -11,6 +11,7 @@ const nextConfig: NextConfig = {
       // Vistas 360 de demostración (prisma/seed.ts).
       { pathname: "/demo-360/**", search: "" },
       { pathname: "/emblems/**", search: "" },
+      { pathname: "/registration/**", search: "" },
     ],
   },
   turbopack: {

@@ -13,7 +13,7 @@ export default async function RegisterPage({ searchParams }: PageProps<"/registr
   const { tipo, siguiente } = await searchParams;
   const kind = tipo === "dealer" ? "dealer" : tipo === "comprador" ? "comprador" : "particular";
   return (
-    <div className="mx-auto max-w-xl px-4 py-16">
+    <div className="mx-auto max-w-2xl px-4 py-16">
       <h1 className="display text-3xl">Crear cuenta</h1>
       <p className="mt-2 text-muted">Guarda vehículos y recibe alertas, o publica los tuyos con fotos, características y ubicación.</p>
       <div className="mt-8 rounded-2xl border border-line bg-surface p-6">
