@@ -116,6 +116,22 @@ npm run lint
 npm run build
 ```
 
+## SEO e indexación de publicaciones
+
+- Cada vehículo publicado (`ACTIVE`) tiene título y descripción propios, URL canónica, metadatos de Open Graph/Twitter y JSON-LD de `Product`/`Car`, oferta y ruta de navegación. Si falta descripción, se genera con los datos del vehículo. Los borradores, pausados y vendidos no son indexables.
+- `/sitemap.xml` consulta la base en cada petición e incluye vehículos publicados, sus fotos, dealers aprobados y las páginas públicas principales. Publicar, editar, pausar, vender o borrar se refleja en la próxima consulta, sin reconstruir el sitio. No se usa `updatedAt` como `lastmod`, porque también cambia por visitas y tasas de cambio. Si el catálogo alcanza 50.000 URLs o 50 MB de XML, hay que dividir el sitemap antes de superar ese límite.
+- `/robots.txt` permite el rastreo público y anuncia el sitemap. Paneles, acceso, registro, comparación, mapa y búsquedas con filtros avanzados quedan fuera del índice; las categorías y su paginación tienen URLs canónicas propias.
+- `SITE_URL` debe ser el origen público definitivo (por defecto `https://tucarroonline.com`), igual durante build y ejecución. Configúralo en las variables de GitHub Actions y en App Service si cambia el dominio. Redirige los dominios alternativos (incluido `www` y el host de Azure) al dominio definitivo en el proveedor de alojamiento.
+
+Después del despliegue:
+
+1. Verifica el dominio en [Google Search Console](https://search.google.com/search-console) y [Bing Webmaster Tools](https://www.bing.com/webmasters/). Para verificación por etiqueta HTML, configura `GOOGLE_SITE_VERIFICATION` y `BING_SITE_VERIFICATION` con el valor de `content` como variables de GitHub Actions y de App Service, y vuelve a desplegar. La verificación DNS también sirve sin estas variables.
+2. Envía `https://tucarroonline.com/sitemap.xml` a ambos servicios (ajusta el dominio si usas otro). Esta entrega inicial cubre las siguientes publicaciones a medida que los buscadores vuelven a consultar el sitemap.
+3. Inspecciona la URL de un carro publicado en Search Console y revisa su HTML y datos estructurados con [Rich Results Test](https://search.google.com/test/rich-results). Comprueba que responde sin sesión y que la URL canónica y las fotos usan el dominio público.
+4. Sigue los informes de indexación para detectar bloqueos del alojamiento, errores de rastreo o publicaciones excluidas. Los buscadores deciden cuándo rastrear e indexar y qué resultados mostrar; el sitemap y los datos estructurados no garantizan indexación inmediata ni posiciones.
+
+Referencias: [Google: URLs canónicas para catálogos](https://developers.google.com/search/docs/specialty/ecommerce/designing-a-url-structure-for-ecommerce-sites), [Google: crear y enviar sitemaps](https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap), [Schema.org: Car](https://schema.org/Car).
+
 ## Despliegue
 
 Azure App Service `carstore-web` (Node 24, plan `cityguide-plan` del grupo `cityguide-rg`, junto a QuehacerRD y HotelMagazine). Cada push a `main` ejecuta `.github/workflows/deploy.yml`: pruebas, build standalone, `prisma migrate deploy` y publicación.

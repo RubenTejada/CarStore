@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { LoginForm } from "@/components/forms/login-form";
 
-export const metadata: Metadata = { title: "Iniciar sesión" };
+export const metadata: Metadata = { title: "Iniciar sesión", robots: { index: false, follow: true } };
 
 export default async function LoginPage() {
   const user = await getCurrentUser();

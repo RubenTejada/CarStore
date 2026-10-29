@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import { ExternalLink, Phone } from "lucide-react";
 import { getFinancingData, type LoanOffer } from "@/lib/financing";
 import { formatPct } from "@/lib/loan";
@@ -7,10 +8,11 @@ import { LenderLogo } from "@/components/financing/lender-logo";
 import type { Condition } from "@/generated/prisma/enums";
 import { PageHeader } from "@/components/layout/page-header";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
+  path: "/financiamiento",
   title: "Financiamiento de vehículos",
   description: "Calcula la cuota de tu préstamo de vehículo y compara las tasas que publican los bancos y asociaciones de República Dominicana.",
-};
+});
 
 const DEFAULT_PRICE = 1_500_000;
 

@@ -4,7 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { PanelShell } from "@/components/panel/shell";
 import type { NavItem } from "@/components/panel/side-nav";
 
-export const metadata = { title: "Mi panel" };
+export const metadata = { title: "Mi panel", robots: { index: false, follow: false } };
 
 export default async function PanelLayout({ children }: LayoutProps<"/panel">) {
   const user = await requireUser();

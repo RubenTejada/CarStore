@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cache } from "react";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import {
@@ -21,6 +22,8 @@ import {
 } from "lucide-react";
 import { siApple, siGooglemaps, siUber, siWaze, type SimpleIcon } from "simple-icons";
 import { db } from "@/lib/db";
+import { vehicleMetadata, vehicleStructuredData } from "@/lib/vehicle-seo";
+import { JsonLd } from "@/components/seo/json-ld";
 import { getCurrentUser } from "@/lib/auth";
 import { canEditVehicle } from "@/lib/listing-rules";
 import { vehicleCardSelect } from "@/lib/search";
@@ -52,7 +55,7 @@ import { button } from "@/components/ui/styles";
 import { cn } from "@/lib/cn";
 import type { FeatureCategory } from "@/generated/prisma/enums";
 
-const getVehicle = (id: string) =>
+const getVehicle = cache((id: string) =>
   db.vehicle.findUnique({
     where: { id },
     include: {
@@ -62,13 +65,11 @@ const getVehicle = (id: string) =>
       photos: { orderBy: { position: "asc" } },
       features: { include: { feature: true } },
     },
-  });
+  }));
 
 export async function generateMetadata({ params }: PageProps<"/vehiculos/[id]/[slug]">): Promise<Metadata> {
   const v = await getVehicle((await params).id);
-  if (!v || v.status !== "ACTIVE") return { title: "Vehículo no disponible" };
-  const title = `${vehicleTitle(v)} ${v.year} en ${formatPrice(v.price, v.currency)}`;
-  return { title, description: v.description ?? undefined, openGraph: { title, images: v.photos[0]?.url } };
+  return vehicleMetadata(v);
 }
 
 export default async function VehiclePage({ params }: PageProps<"/vehiculos/[id]/[slug]">) {
@@ -124,6 +125,7 @@ export default async function VehiclePage({ params }: PageProps<"/vehiculos/[id]
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+      <JsonLd data={vehicleStructuredData(v)} />
       {v.status !== "ACTIVE" && (
         <p className="mb-4 rounded-lg border border-sun bg-sun/15 px-4 py-3 text-sm font-medium">
           Vista previa: este vehículo está en estado «{VEHICLE_STATUS_LABEL[v.status]}» y no aparece en las búsquedas.
@@ -169,7 +171,7 @@ export default async function VehiclePage({ params }: PageProps<"/vehiculos/[id]
             <span className="text-sm text-muted">{v.views.toLocaleString("es-DO")} visitas</span>
           </div>
           <h1 className="display mt-3 text-3xl">
-            {title}
+            {title} {v.year}
             {v.trim && <span className="block text-xl font-semibold text-muted">{v.trim}</span>}
           </h1>
           <p className="mt-4 text-4xl font-extrabold tracking-tight text-brand">{formatPrice(v.price, v.currency)}</p>

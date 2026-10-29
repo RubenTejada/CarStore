@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { JsonLd } from "@/components/seo/json-ld";
+import { pageMetadata, SITE_DESCRIPTION, SITE_NAME, SITE_TITLE, siteUrl } from "@/lib/seo";
 import { BadgeCheck, MapPin } from "lucide-react";
 import { db } from "@/lib/db";
 import { FREE_PLAN } from "@/lib/listing-rules";
@@ -15,6 +17,10 @@ import { button } from "@/components/ui/styles";
 import { cn } from "@/lib/cn";
 
 export const dynamic = "force-dynamic";
+export const metadata = {
+  ...pageMetadata({ path: "/", title: SITE_TITLE, description: SITE_DESCRIPTION }),
+  title: { absolute: SITE_TITLE },
+};
 
 export default async function HomePage() {
   const [brands, featured, dealers, totals, plans] = await Promise.all([
@@ -33,6 +39,13 @@ export default async function HomePage() {
 
   return (
     <>
+      <JsonLd data={{
+        "@context": "https://schema.org",
+        "@graph": [
+          { "@type": "Organization", "@id": siteUrl("/#organization"), name: SITE_NAME, url: siteUrl(), logo: siteUrl("/brand/tucarroonline-icon-512.png") },
+          { "@type": "WebSite", "@id": siteUrl("/#website"), name: SITE_NAME, url: siteUrl(), inLanguage: "es-DO", publisher: { "@id": siteUrl("/#organization") } },
+        ],
+      }} />
       <section className="relative overflow-hidden bg-night">
         <div className="relative mx-auto max-w-7xl px-4 pt-12 pb-16 sm:px-6 lg:pt-16">
           <h1 className="display text-3xl text-white sm:text-4xl">

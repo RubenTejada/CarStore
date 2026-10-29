@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { browseMetadata } from "@/lib/seo";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { LayoutGrid, Map as MapIcon, SlidersHorizontal, X } from "lucide-react";
@@ -19,7 +20,16 @@ import { PageHeader } from "@/components/layout/page-header";
 import { LOOK } from "@/components/layout/look";
 import { cn } from "@/lib/cn";
 
-export const metadata: Metadata = { title: "Vehículos en venta" };
+export async function generateMetadata({ searchParams }: PageProps<"/vehiculos">): Promise<Metadata> {
+  const raw = await searchParams;
+  const f = parseSearchParams(raw);
+  const brands = f.marca ? await getBrowseCatalog() : [];
+  const brand = brands.find((b) => b.slug === f.marca);
+  const model = brand?.models.find((m) => m.slug === f.modelo);
+  const subject = [f.tipo ? BODY_TYPE_LABEL[f.tipo] : "Vehículos", brand?.name, model?.name, f.condicion && CONDITION_LABEL[f.condicion].toLowerCase()].filter(Boolean).join(" ");
+  const title = `${subject} en venta en ${f.provincia ?? "República Dominicana"}`;
+  return browseMetadata("/vehiculos", raw, title, `${title}. Compara precios, fotos y características de carros de dealers y vendedores particulares en TuCarroOnline.`);
+}
 
 export default async function VehiclesPage({ searchParams }: PageProps<"/vehiculos">) {
   const raw = await searchParams;

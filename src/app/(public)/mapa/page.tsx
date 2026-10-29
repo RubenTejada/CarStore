@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { NO_INDEX, pageMetadata } from "@/lib/seo";
 import { Building2, Car, Layers } from "lucide-react";
 import { db } from "@/lib/db";
 import { searchMapPoints } from "@/lib/search";
@@ -17,7 +18,7 @@ const SHOW = [
   { value: "dealers", label: "Dealers", icon: Building2 },
 ] as const;
 
-export const metadata: Metadata = { title: "Mapa de vehículos y dealers" };
+export const metadata: Metadata = { ...pageMetadata({ path: "/mapa", title: "Mapa de vehículos y dealers", description: "Ubica vehículos en venta y dealers en el mapa de República Dominicana." }), robots: NO_INDEX };
 
 export default async function MapPage({ searchParams }: PageProps<"/mapa">) {
   const sp = await searchParams;
