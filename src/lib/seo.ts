@@ -35,7 +35,7 @@ export function browseMetadata(path: string, raw: RawSearchParams, title: string
   const filters = parseSearchParams(raw);
   const indexable = new Set(["tipo", "marca", "modelo", "condicion", "provincia", "pagina"]);
   const index = Object.keys(filters).every((key) => indexable.has(key));
-  const query = toQueryString({ ...filters, vista: undefined, orden: undefined, pagina: filters.pagina === 1 ? undefined : filters.pagina });
+  const query = toQueryString({ ...filters, vista: undefined, orden: undefined, moneda: undefined, pagina: filters.pagina === 1 ? undefined : filters.pagina });
   return {
     ...pageMetadata({ path: path + query, title: filters.pagina && filters.pagina > 1 ? `${title} — Página ${filters.pagina}` : title, description }),
     robots: index ? { index: true, follow: true } : NO_INDEX,

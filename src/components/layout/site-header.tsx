@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { Menu, Plus, User } from "lucide-react";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, homeFor } from "@/lib/auth";
 import { button } from "@/components/ui/styles";
 import { cn } from "@/lib/cn";
 import { Logo } from "./logo";
 import { MainNavLinks } from "./main-nav";
+import { SavedLink } from "@/components/saved/saved-link";
 import { LOOK } from "./look";
 
 const NAV = [
@@ -18,7 +19,8 @@ const NAV = [
 
 export async function SiteHeader() {
   const user = await getCurrentUser();
-  const account = user ? { href: user.role === "ADMIN" ? "/admin" : "/panel", label: user.role === "ADMIN" ? "Administración" : "Mi panel" } : { href: "/login", label: "Iniciar sesión" };
+  const ACCOUNT_LABEL = { ADMIN: "Administración", BUYER: "Mi cuenta", DEALER: "Mi panel", SELLER: "Mi panel" };
+  const account = user ? { href: homeFor(user.role), label: ACCOUNT_LABEL[user.role] } : { href: "/login", label: "Iniciar sesión" };
   const dark = LOOK === "marco";
   const ghost = cn(button("ghost", "sm"), dark && "text-white hover:bg-white/10");
   return (
@@ -29,11 +31,12 @@ export async function SiteHeader() {
           <MainNavLinks items={NAV} variant="bar" dark={dark} />
         </nav>
         <div className="ml-auto flex items-center gap-2">
+          <SavedLink className={ghost} />
           <Link href={account.href} className={cn(ghost, "hidden sm:inline-flex")}>
             <User className="size-4" aria-hidden />
             {account.label}
           </Link>
-          <Link href={user ? "/panel/vehiculos/nuevo" : "/planes"} className={button("primary", "sm")}>
+          <Link href={user && user.role !== "BUYER" ? "/panel/vehiculos/nuevo" : "/planes"} className={button("primary", "sm")}>
             <Plus className="size-4" aria-hidden />
             <span className="max-[380px]:sr-only">Publicar</span>
           </Link>

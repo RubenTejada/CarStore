@@ -6,6 +6,7 @@ import { ArrowRight, ExternalLink, Info, TriangleAlert } from "lucide-react";
 import { CONDITION_LABEL, formatPrice } from "@/lib/labels";
 import { DEFAULT_DOWN_PCT, DEFAULT_TERM, LOAN_TERMS, formatPct, quoteLoan } from "@/lib/loan";
 import type { LoanOffer } from "@/lib/financing";
+import type { CostLine } from "@/lib/purchase-cost";
 import type { Condition } from "@/generated/prisma/enums";
 import { input, label } from "@/components/ui/styles";
 import { cn } from "@/lib/cn";
@@ -20,6 +21,8 @@ type Props = {
   /** Cuántas entidades listar; el resto se ve en `moreHref`. */
   limit?: number;
   moreHref?: string;
+  /** Gastos del comprador además del precio (traspaso, marbete): se suman a lo que hay que tener al comprar. */
+  costs?: CostLine[];
 };
 
 const money = (n: number) => formatPrice(Math.round(n), "DOP");
@@ -28,7 +31,7 @@ const money = (n: number) => formatPrice(Math.round(n), "DOP");
  * Calculadora de cuota (sistema francés) y comparador: la cuota de cada entidad con su tasa
  * publicada, para el mismo precio, inicial y plazo.
  */
-export function LoanCalculator({ offers, price: initialPrice, condition: initialCondition, vehicle, limit, moreHref }: Props) {
+export function LoanCalculator({ offers, price: initialPrice, condition: initialCondition, vehicle, limit, moreHref, costs = [] }: Props) {
   const [price, setPrice] = useState(initialPrice);
   const [condition, setCondition] = useState<Condition>(initialCondition);
   const [downPct, setDownPct] = useState(DEFAULT_DOWN_PCT);
@@ -47,6 +50,7 @@ export function LoanCalculator({ offers, price: initialPrice, condition: initial
   const rate = customRate === "" ? best?.rate : Number(customRate);
   const quote = rate !== undefined && Number.isFinite(rate) ? quoteLoan(price, downPct, rate, term) : null;
   const shown = limit ? ranked.slice(0, limit) : ranked;
+  const fees = costs.reduce((sum, c) => sum + c.amount, 0);
 
   return (
     <div className={cn("grid gap-6", !vehicle && "lg:grid-cols-[22rem_1fr] lg:items-start")}>
@@ -131,7 +135,39 @@ export function LoanCalculator({ offers, price: initialPrice, condition: initial
               <dt className="text-muted">Total de intereses</dt>
               <dd className="font-semibold">{money(quote.totalInterest)}</dd>
             </div>
+            {fees > 0 && (
+              <>
+                <div>
+                  <dt className="text-muted">Al comprar necesitas</dt>
+                  <dd className="font-semibold">{money(price - quote.principal + fees)}</dd>
+                  <dd className="text-xs text-muted">Inicial más gastos</dd>
+                </div>
+                <div>
+                  <dt className="text-muted">Costo total</dt>
+                  <dd className="font-semibold">{money(price + quote.totalInterest + fees)}</dd>
+                  <dd className="text-xs text-muted">Precio, intereses y gastos</dd>
+                </div>
+              </>
+            )}
           </dl>
+        )}
+        {fees > 0 && (
+          <details className="mt-4 border-t border-line pt-3 text-sm">
+            <summary className="flex cursor-pointer justify-between font-semibold">
+              Gastos de traspaso y marbete <span>{money(fees)}</span>
+            </summary>
+            <dl className="mt-2 space-y-2">
+              {costs.map((c) => (
+                <div key={c.label}>
+                  <div className="flex justify-between gap-3">
+                    <dt>{c.label}</dt>
+                    <dd className="font-semibold tabular-nums">{money(c.amount)}</dd>
+                  </div>
+                  <dd className="text-xs text-muted">{c.note}</dd>
+                </div>
+              ))}
+            </dl>
+          </details>
         )}
         <p className="mt-4 flex gap-1.5 text-xs text-muted">
           <Info className="mt-px size-3.5 shrink-0" aria-hidden />

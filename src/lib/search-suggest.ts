@@ -310,8 +310,8 @@ export function fromParams(params: Record<string, string>) {
     else if (k === "anioMin" || k === "anioMax") f[k] = Number(v);
     else rest[k] = v;
   }
-  // `orden` y `vista` no cambian los conteos.
-  const countable = Object.keys(rest).every((k) => k === "orden" || k === "vista");
+  // `orden`, `vista`, `moneda` e `ia` no cambian los conteos.
+  const countable = Object.keys(rest).every((k) => ["orden", "vista", "moneda", "ia"].includes(k));
   return { filters: f, rest, countable };
 }
 

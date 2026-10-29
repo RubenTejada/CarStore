@@ -30,6 +30,7 @@ export const SORTS = {
   "anio-desc": "Año: más nuevo",
   "anio-asc": "Año: más antiguo",
   "km-asc": "Menor kilometraje",
+  rebajados: "Rebajados recientemente",
 } as const;
 export type Sort = keyof typeof SORTS;
 
@@ -66,6 +67,10 @@ const schema = z.object({
     .catch(undefined),
   pagina: z.coerce.number().int().min(1).max(500).optional().catch(undefined),
   vista: z.enum(["mapa"]).optional().catch(undefined),
+  // Moneda en que se muestran el filtro de precio y los equivalentes; el filtro siempre viaja en RD$.
+  moneda: z.enum(["usd"]).optional().catch(undefined),
+  // Texto que interpretó la búsqueda con IA (ver search-ai.ts): solo se muestra, no filtra.
+  ia: text,
 });
 
 export type SearchFilters = z.infer<typeof schema>;
@@ -155,6 +160,8 @@ export function buildOrderBy(sort: Sort | undefined): Prisma.VehicleOrderByWithR
       return [{ createdAt: "asc" }];
     case "km-asc":
       return [{ mileageKm: "asc" }];
+    case "rebajados":
+      return [{ priceDropAt: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }];
     default:
       return [{ createdAt: "desc" }];
   }

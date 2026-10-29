@@ -2,19 +2,26 @@ import type { Metadata } from "next";
 import { browseMetadata } from "@/lib/seo";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { LayoutGrid, Map as MapIcon, SlidersHorizontal, X } from "lucide-react";
+import { headers } from "next/headers";
+import { LayoutGrid, Map as MapIcon, SlidersHorizontal, Sparkles, X } from "lucide-react";
 import { db } from "@/lib/db";
 import { getBrowseCatalog, getSearchIndex, type BrowseBrand } from "@/lib/catalog";
 import { prepareIndex, resolveFreeText } from "@/lib/search-suggest";
 import { getFacets, searchMapPoints, searchVehicles } from "@/lib/search";
+import { getUsdRate } from "@/lib/exchange-rate";
+import { interpretSearch } from "@/lib/search-ai";
+import { getCurrentUser } from "@/lib/auth";
+import { savedSearchQuery } from "@/lib/saved-search";
+import { SaveSearchButton } from "@/components/saved/save-search-button";
 import { parseSearchParams, toQueryString, type SearchFilters } from "@/lib/search-params";
-import { BODY_TYPE_LABEL, CONDITION_LABEL, DRIVETRAIN_LABEL, FUEL_LABEL, TRANSMISSION_LABEL, formatKm, formatPrice } from "@/lib/labels";
+import { BODY_TYPE_LABEL, CONDITION_LABEL, DRIVETRAIN_LABEL, FUEL_LABEL, TRANSMISSION_LABEL, formatKm, formatPrice, toUsd } from "@/lib/labels";
 import { PROVINCE_NAMES } from "@/lib/provinces";
 import { vehicleTitle, vehicleUrl } from "@/lib/urls";
 import { FilterPanel } from "@/components/browse/filter-panel";
 import { SearchBox } from "@/components/browse/search-box";
 import { SortSelect } from "@/components/browse/sort-select";
 import { VehicleCard } from "@/components/vehicle/vehicle-card";
+import { RecentlyViewed } from "@/components/saved/recently-viewed";
 import { MapView } from "@/components/map/map-view";
 import { PageHeader } from "@/components/layout/page-header";
 import { LOOK } from "@/components/layout/look";
@@ -41,9 +48,13 @@ export default async function VehiclesPage({ searchParams }: PageProps<"/vehicul
   if (f.q) {
     const href = resolveFreeText(prepareIndex(await getSearchIndex()), values);
     if (href) redirect(href);
+    // Lo que el índice local no reconoce («familiar», «menos de un millón»…) lo interpreta Claude.
+    const visitor = (await headers()).get("x-forwarded-for")?.split(",")[0].trim() || "anon";
+    const ai = await interpretSearch(f.q, values, visitor);
+    if (ai) redirect(`/vehiculos?${new URLSearchParams(ai)}`);
   }
 
-  const [result, facets, brands, features, points, modelTrims] = await Promise.all([
+  const [result, facets, brands, features, points, modelTrims, usd] = await Promise.all([
     searchVehicles(f),
     getFacets(f),
     getBrowseCatalog(),
@@ -52,7 +63,9 @@ export default async function VehiclesPage({ searchParams }: PageProps<"/vehicul
     f.marca && f.modelo
       ? db.trim.findMany({ where: { model: { slug: f.modelo, brand: { slug: f.marca } } }, orderBy: { name: "asc" }, select: { id: true, slug: true, name: true } })
       : Promise.resolve([]),
+    getUsdRate(),
   ]);
+  const usdRate = f.moneda === "usd" ? usd.rate : undefined;
 
   const brandName = brands.find((b) => b.slug === f.marca)?.name;
   const modelName = brands.find((b) => b.slug === f.marca)?.models.find((m) => m.slug === f.modelo)?.name;
@@ -62,8 +75,16 @@ export default async function VehiclesPage({ searchParams }: PageProps<"/vehicul
     .filter((t) => t.count > 0 || t.slug === f.version);
   const heading = [f.condicion && CONDITION_LABEL[f.condicion] + "s", f.tipo ? BODY_TYPE_LABEL[f.tipo] : null, brandName, modelName, trimName].filter(Boolean).join(" ") || "Todos los vehículos";
 
-  const chips = activeChips(f, { brandName, modelName, trimName, features });
+  const chips = activeChips(f, { brandName, modelName, trimName, features, usdRate });
   const qs = toQueryString(f);
+  // Alerta de vehículos nuevos para esta búsqueda (solo filtros, sin orden ni página).
+  const alertQuery = savedSearchQuery(f);
+  const user = alertQuery ? await getCurrentUser() : null;
+  const alertState = !user
+    ? "anon"
+    : (await db.savedSearch.count({ where: { userId: user.id, query: alertQuery } }))
+      ? "saved"
+      : "new";
 
   return (
     <>
@@ -98,6 +119,14 @@ export default async function VehiclesPage({ searchParams }: PageProps<"/vehicul
       </PageHeader>
 
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+        {f.ia && (
+          <p className="mb-3 flex items-start gap-2 text-sm text-muted" role="status">
+            <Sparkles className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden />
+            <span>
+              Interpretamos <strong className="text-ink">«{f.ia}»</strong> con estos filtros. Quita los que no quieras.
+            </span>
+          </p>
+        )}
         {chips.length > 0 && (
           <ul className="mb-6 flex flex-wrap gap-2" aria-label="Filtros activos">
             {chips.map((c) => (
@@ -113,10 +142,15 @@ export default async function VehiclesPage({ searchParams }: PageProps<"/vehicul
               </li>
             ))}
             <li>
-              <Link href={f.vista ? "?vista=mapa" : "/vehiculos"} className="flex py-1.5 text-sm font-semibold text-accent hover:underline">
+              <Link href={toQueryString({ vista: f.vista, moneda: f.moneda }) || "/vehiculos"} className="flex py-1.5 text-sm font-semibold text-accent hover:underline">
                 Limpiar todo
               </Link>
             </li>
+            {alertQuery && (
+              <li className="sm:ml-auto">
+                <SaveSearchButton key={alertQuery} query={alertQuery} name={chips.map((c) => c.label).join(", ")} state={alertState} />
+              </li>
+            )}
           </ul>
         )}
 
@@ -131,7 +165,7 @@ export default async function VehiclesPage({ searchParams }: PageProps<"/vehicul
               Filtros {chips.length > 0 && `(${chips.length})`}
             </label>
             <div className="mt-4 hidden peer-checked:block lg:mt-0 lg:block">
-              <Filters f={f} values={values} brands={brands} trims={trims} facets={facets} features={features} qs={qs} />
+              <Filters f={f} values={values} brands={brands} trims={trims} facets={facets} features={features} qs={qs} usdRate={usd.rate} />
             </div>
           </aside>
 
@@ -163,7 +197,7 @@ export default async function VehiclesPage({ searchParams }: PageProps<"/vehicul
                 <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
                   {result.items.map((v, i) => (
                     <li key={v.id}>
-                      <VehicleCard v={v} priority={i < 3} className="h-full" />
+                      <VehicleCard v={v} priority={i < 3} usdRate={usdRate} className="h-full" />
                     </li>
                   ))}
                 </ul>
@@ -173,6 +207,7 @@ export default async function VehiclesPage({ searchParams }: PageProps<"/vehicul
           </section>
         </div>
       </div>
+      <RecentlyViewed className="pb-16" />
     </>
   );
 }
@@ -185,6 +220,7 @@ function Filters({
   facets,
   features,
   qs,
+  usdRate,
 }: {
   f: SearchFilters;
   values: Record<string, string>;
@@ -193,9 +229,11 @@ function Filters({
   facets: Awaited<ReturnType<typeof getFacets>>;
   features: { slug: string; name: string; category: import("@/generated/prisma/enums").FeatureCategory; icon: string }[];
   qs: string;
+  usdRate: number;
 }) {
   return (
     <FilterPanel
+      usdRate={usdRate}
       resetKey={qs}
       values={values}
       selectedFeatures={f.car ?? []}
@@ -243,17 +281,18 @@ type Remove = Partial<Record<keyof SearchFilters, unknown>>;
 
 function activeChips(
   f: SearchFilters,
-  ctx: { brandName?: string; modelName?: string; trimName?: string; features: { slug: string; name: string }[] },
+  ctx: { brandName?: string; modelName?: string; trimName?: string; features: { slug: string; name: string }[]; usdRate?: number },
 ): { label: string; remove: Remove }[] {
   const chips: { label: string; remove: Remove }[] = [];
+  const price = (dop: number) => (ctx.usdRate ? formatPrice(toUsd(dop, ctx.usdRate), "USD") : formatPrice(dop, "DOP"));
   if (f.q) chips.push({ label: `“${f.q}”`, remove: { q: undefined } });
   if (f.condicion) chips.push({ label: CONDITION_LABEL[f.condicion], remove: { condicion: undefined } });
   if (f.tipo) chips.push({ label: BODY_TYPE_LABEL[f.tipo], remove: { tipo: undefined } });
   if (f.marca) chips.push({ label: ctx.brandName ?? f.marca, remove: { marca: undefined, modelo: undefined, version: undefined } });
   if (f.modelo) chips.push({ label: ctx.modelName ?? f.modelo, remove: { modelo: undefined, version: undefined } });
   if (f.modelo && f.version) chips.push({ label: ctx.trimName ?? f.version, remove: { version: undefined } });
-  if (f.precioMin) chips.push({ label: `Desde ${formatPrice(f.precioMin, "DOP")}`, remove: { precioMin: undefined } });
-  if (f.precioMax) chips.push({ label: `Hasta ${formatPrice(f.precioMax, "DOP")}`, remove: { precioMax: undefined } });
+  if (f.precioMin) chips.push({ label: `Desde ${price(f.precioMin)}`, remove: { precioMin: undefined } });
+  if (f.precioMax) chips.push({ label: `Hasta ${price(f.precioMax)}`, remove: { precioMax: undefined } });
   if (f.anioMin) chips.push({ label: `Año ${f.anioMin}+`, remove: { anioMin: undefined } });
   if (f.anioMax) chips.push({ label: `Año hasta ${f.anioMax}`, remove: { anioMax: undefined } });
   if (f.kmMax !== undefined) chips.push({ label: `Hasta ${formatKm(f.kmMax)}`, remove: { kmMax: undefined } });

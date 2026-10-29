@@ -5,7 +5,7 @@ export const MAX_COMPARE = 3;
 /** Lo mínimo para pintar un vehículo en la bandeja sin consultar al servidor. */
 export type CompareItem = { id: string; title: string; year: number; photo?: string };
 
-const ID_RE = /^[\w-]{1,40}$/;
+export const ID_RE = /^[\w-]{1,40}$/;
 
 /** `?ids=a,b,c` → ids válidos, sin repetir y como máximo MAX_COMPARE. */
 export function parseCompareIds(value: string | string[] | undefined): string[] {

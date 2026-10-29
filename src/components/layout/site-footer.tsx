@@ -12,7 +12,7 @@ export function SiteFooter() {
           </p>
         </div>
         <FooterCol title="Buscar" links={[["/vehiculos?tipo=jeepeta", "Jeepetas"], ["/vehiculos?tipo=sedan", "Sedanes"], ["/vehiculos?tipo=pickup", "Camionetas"], ["/vehiculos?condicion=nuevo", "Vehículos nuevos"]]} />
-        <FooterCol title="Explorar" links={[["/dealers", "Dealers"], ["/mapa", "Mapa de vehículos"], ["/financiamiento", "Financiamiento"], ["/planes", "Planes para publicar"]]} />
+        <FooterCol title="Explorar" links={[["/dealers", "Dealers"], ["/mapa", "Mapa de vehículos"], ["/financiamiento", "Financiamiento"], ["/compra-segura", "Guía de compra segura"], ["/planes", "Planes para publicar"]]} />
         <FooterCol title="Tu cuenta" links={[["/login", "Iniciar sesión"], ["/registro", "Crear cuenta"], ["/registro?tipo=dealer", "Registrar mi dealer"]]} />
       </div>
       <div className="border-t border-white/10">

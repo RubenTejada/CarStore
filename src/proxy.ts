@@ -5,11 +5,12 @@ import { NextResponse, type NextRequest } from "next/server";
 export function proxy(request: NextRequest) {
   if (!request.cookies.has("cs_session")) {
     const url = new URL("/login", request.url);
+    url.searchParams.set("siguiente", request.nextUrl.pathname);
     return NextResponse.redirect(url);
   }
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/panel/:path*", "/admin/:path*"],
+  matcher: ["/panel/:path*", "/admin/:path*", "/cuenta/:path*"],
 };

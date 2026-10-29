@@ -108,6 +108,12 @@ En el panel, **Publicar vehículo** acepta el enlace de un anuncio en cualquier 
 
 `src/lib/claude.ts` usa Claude en Microsoft Foundry si están `ANTHROPIC_FOUNDRY_RESOURCE` y `ANTHROPIC_FOUNDRY_API_KEY` (el despliegue debe llamarse como el modelo, `claude-opus-5-5`); si no, la API de Anthropic con `ANTHROPIC_API_KEY`. Aplica a la importación y a las tasas diarias.
 
+## Correo, cuentas de comprador y alertas
+
+Los correos salen por Azure Communication Services (`src/lib/email.ts`): confirmación de correo, recuperar contraseña, solicitudes «Me interesa» / prueba de manejo al vendedor y el resumen diario de alertas. Configuración en la App Service y en los secretos del repositorio: `AZURE_COMMUNICATION_CONNECTION_STRING` (cadena de conexión del recurso) y `EMAIL_FROM` (remitente de un dominio verificado en el recurso de correo, p. ej. `DoNotReply@tucarroonline.com`). Sin ellas, en desarrollo cada correo se escribe en la consola del servidor con sus enlaces.
+
+Las cuentas de comprador (`/registro?tipo=comprador`) guardan vehículos (sincronizados con los del navegador), búsquedas y alertas en `/cuenta`. `.github/workflows/daily-alerts.yml` corre `npm run alerts:send` cada mañana: a quien confirmó su correo y tiene las alertas activas le envía los vehículos publicados desde la última revisión que coinciden con sus búsquedas y las rebajas de sus guardados.
+
 ## Pruebas
 
 ```bash

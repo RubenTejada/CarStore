@@ -7,11 +7,11 @@ import { PageTitle } from "@/components/panel/shell";
 
 export default async function NewVehicle() {
   const user = await requireUser("DEALER", "SELLER");
-  const { brands, features, defaults, featuredHint } = await getVehicleFormData(user);
+  const { brands, features, defaults, featuredHint, aiDescription } = await getVehicleFormData(user);
   return (
     <div className="max-w-5xl">
       <PageTitle title="Publicar vehículo" text="Completa los datos. Puedes guardarlo como borrador y publicarlo después." />
-      <ListingImporter action={saveVehicle.bind(null, null)} values={defaults} brands={brands} features={features} provinces={PROVINCE_NAMES} featuredHint={featuredHint} />
+      <ListingImporter action={saveVehicle.bind(null, null)} values={defaults} brands={brands} features={features} provinces={PROVINCE_NAMES} featuredHint={featuredHint} aiDescription={aiDescription} />
     </div>
   );
 }

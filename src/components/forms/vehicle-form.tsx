@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState, useTransition } from "react";
+import { Sparkles } from "lucide-react";
+import { describeVehicle } from "@/app/actions/vehicles";
 import type { BodyType, FeatureCategory } from "@/generated/prisma/enums";
 import type { FormState } from "@/app/actions/auth";
 import {
@@ -48,6 +50,8 @@ export type VehicleFormValues = {
   interiorPano: string | null;
   features: string[];
   featured: boolean;
+  plate?: string;
+  vin?: string;
   /** Anuncio de otro portal del que se importó (ver actions/import.ts). */
   sourceUrl?: string;
 };
@@ -59,11 +63,13 @@ export type VehicleFormProps = {
   features: { slug: string; name: string; category: FeatureCategory; icon: string }[];
   provinces: string[];
   featuredHint: string;
+  /** Muestra «Redactar con IA» junto a la descripción (hay clave de Claude). */
+  aiDescription?: boolean;
 };
 
 const OTHER_TRIM = "otra";
 
-export function VehicleForm({ action, values, brands, features, provinces, featuredHint }: VehicleFormProps) {
+export function VehicleForm({ action, values, brands, features, provinces, featuredHint, aiDescription = false }: VehicleFormProps) {
   const { state, pending, onSubmit } = useFormAction(action);
   const [brandId, setBrandId] = useState(values.brandId);
   const [modelId, setModelId] = useState(values.modelId);
@@ -235,9 +241,18 @@ export function VehicleForm({ action, values, brands, features, provinces, featu
             <input id="seats" name="seats" type="number" min={1} max={20} defaultValue={values.seats} className={input} />
           </Field>
         </div>
-        <Field label="Descripción" id="description" className="mt-4">
-          <textarea id="description" name="description" rows={5} maxLength={4000} defaultValue={values.description} placeholder="Estado, mantenimientos, financiamiento, garantía…" className={cn(input, "h-auto py-2.5")} />
-        </Field>
+        <DescriptionField defaultValue={values.description} ai={aiDescription} />
+      </Section>
+
+      <Section title="Placa y chasis" text="Opcional. Con la placa y el chasis el comprador puede verificar el vehículo en la DGII: los anuncios verificables generan más confianza.">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Field label="Placa" id="plate">
+            <input id="plate" name="plate" defaultValue={values.plate} maxLength={20} placeholder="Ej. A123456" autoCapitalize="characters" className={input} />
+          </Field>
+          <Field label="Chasis (VIN)" id="vin">
+            <input id="vin" name="vin" defaultValue={values.vin} maxLength={30} placeholder="17 letras y números" autoCapitalize="characters" className={input} />
+          </Field>
+        </div>
       </Section>
 
       <Section title="Características y facilidades">
@@ -290,6 +305,53 @@ export function VehicleForm({ action, values, brands, features, provinces, featu
         </div>
       </div>
     </form>
+  );
+}
+
+/** Descripción con el botón para redactarla con IA a partir de lo ya llenado en el formulario. */
+function DescriptionField({ defaultValue, ai }: { defaultValue: string; ai: boolean }) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  const [pending, start] = useTransition();
+  const [error, setError] = useState("");
+  const write = () =>
+    start(async () => {
+      setError("");
+      const form = ref.current?.form;
+      if (!form) return;
+      const result = await describeVehicle(new FormData(form));
+      if (result.text && ref.current) ref.current.value = result.text;
+      else setError(result.error ?? "No se pudo redactar la descripción.");
+    });
+  return (
+    <div className="mt-4">
+      <div className="mb-1.5 flex items-end justify-between gap-3">
+        <label htmlFor="description" className={cn(label, "mb-0")}>
+          Descripción
+        </label>
+        {ai && (
+          <button type="button" onClick={write} disabled={pending} className={button("outline", "sm")}>
+            <Sparkles className="size-4 text-brand" aria-hidden />
+            {pending ? "Redactando…" : "Redactar con IA"}
+          </button>
+        )}
+      </div>
+      <textarea
+        ref={ref}
+        id="description"
+        name="description"
+        rows={5}
+        maxLength={4000}
+        defaultValue={defaultValue}
+        placeholder="Estado, mantenimientos, financiamiento, garantía…"
+        aria-busy={pending}
+        className={cn(input, "h-auto py-2.5", pending && "opacity-60")}
+      />
+      {ai && (
+        <p className={cn("mt-1 text-xs", error ? "text-accent" : "text-muted")} role={error ? "alert" : undefined}>
+          {error || "Usa los datos y características que marcaste. Revísala antes de publicar: puedes editarla."}
+        </p>
+      )}
+    </div>
   );
 }
 

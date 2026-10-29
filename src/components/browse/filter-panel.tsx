@@ -13,6 +13,8 @@ import {
   FUEL_LABEL,
   TRANSMISSION_LABEL,
   formatPrice,
+  formatRate,
+  toUsd,
 } from "@/lib/labels";
 import type { Histogram } from "@/lib/histogram";
 import { cn } from "@/lib/cn";
@@ -34,6 +36,8 @@ type Props = {
   years: Histogram | null;
   features: { slug: string; name: string; category: FeatureCategory; icon: string }[];
   provinces: string[];
+  /** Tasa USD→DOP del día, para mostrar el filtro de precio en US$. */
+  usdRate: number;
 };
 
 const KMS = [10_000, 30_000, 50_000, 80_000, 120_000, 160_000];
@@ -63,6 +67,7 @@ function FilterForm({
   years,
   features,
   provinces,
+  usdRate,
   featureQuery,
   onFeatureQuery,
 }: Props & { featureQuery: string; onFeatureQuery: (q: string) => void }) {
@@ -72,6 +77,7 @@ function FilterForm({
   const [pending, startTransition] = useTransition();
   const [brand, setBrand] = useState(values.marca ?? "");
   const models = brands.find((b) => b.slug === brand)?.models ?? [];
+  const usd = values.moneda === "usd";
 
   /** Vacía un campo dependiente (modelo, versión) cuando cambia el campo del que depende. */
   const clear = (name: string) => {
@@ -212,15 +218,36 @@ function FilterForm({
       </div>
 
       <div>
+        <fieldset className="mb-2 flex items-center justify-between">
+          <legend className="sr-only">Moneda del precio</legend>
+          <span aria-hidden className="text-sm font-medium">
+            Moneda
+          </span>
+          <span className="grid grid-cols-2 rounded-lg border border-line bg-surface p-0.5">
+            {[
+              ["", "RD$"],
+              ["usd", "US$"],
+            ].map(([v, l]) => (
+              <label key={v} className="cursor-pointer">
+                <input type="radio" name="moneda" value={v} defaultChecked={(values.moneda ?? "") === v} className="peer sr-only" />
+                <span className="block rounded-md px-3 py-1 text-xs font-bold text-muted peer-checked:bg-brand peer-checked:text-brand-ink peer-focus-visible:ring-2 peer-focus-visible:ring-accent">
+                  {l}
+                </span>
+              </label>
+            ))}
+          </span>
+        </fieldset>
         <RangeHistogram
-          legend="Precio (RD$)"
+          legend={usd ? "Precio (US$)" : "Precio (RD$)"}
           names={["precioMin", "precioMax"]}
           histogram={prices}
           value={[values.precioMin, values.precioMax]}
-          format={(n) => formatPrice(n, "DOP")}
+          format={(n) => (usd ? formatPrice(toUsd(n, usdRate), "USD") : formatPrice(n, "DOP"))}
           onCommit={apply}
         />
-        <p className="mt-1 text-xs text-muted">Precios en US$ se convierten a RD$ para comparar.</p>
+        <p className="mt-1 text-xs text-muted">
+          {usd ? `Equivalente a la tasa del día (${formatRate(usdRate)} por dólar).` : "Precios en US$ se convierten a RD$ para comparar."}
+        </p>
       </div>
 
       <RangeHistogram
