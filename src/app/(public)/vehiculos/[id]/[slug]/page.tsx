@@ -145,7 +145,7 @@ export default async function VehiclePage({ params }: PageProps<"/vehiculos/[id]
     .filter((g) => g.items.length);
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+    <div className={cn("mx-auto max-w-7xl px-4 py-6 sm:px-6", (contactPhone || callPhone) && "pb-28 lg:pb-6")}>
       <JsonLd data={vehicleStructuredData(v)} />
       {v.status === "ACTIVE" && <TrackRecent id={v.id} />}
       {v.status !== "ACTIVE" && (
@@ -245,7 +245,7 @@ export default async function VehiclePage({ params }: PageProps<"/vehiculos/[id]
 
           <div className="mt-5 grid gap-2">
             {contactPhone && (
-              <ContactLink vehicleId={v.id} kind="WHATSAPP" href={whatsappUrl(contactPhone, message)} target="_blank" rel="noopener noreferrer" className={cn(button("primary", "lg"), "bg-[#1f8a4c]")}>
+              <ContactLink vehicleId={v.id} kind="WHATSAPP" href={whatsappUrl(contactPhone, message)} target="_blank" rel="noopener noreferrer" className={cn(button("primary", "lg"), "hidden bg-[#157f3b] text-white lg:flex")}>
                 <MessageCircle className="size-5" aria-hidden />
                 Escribir por WhatsApp
               </ContactLink>
@@ -260,11 +260,11 @@ export default async function VehiclePage({ params }: PageProps<"/vehiculos/[id]
               <CalendarCheck className="size-5" aria-hidden />
               Agendar prueba de manejo
             </a>
-            <div className="grid grid-cols-2 gap-2">
-              <FavoriteToggle variant="button" id={v.id} title={`${title} ${v.year}`} />
-              <CompareToggle variant="button" item={{ id: v.id, title, year: v.year, photo: v.photos[0]?.url }} />
+            <div className="mt-2 grid grid-cols-3 gap-1 border-t border-line pt-3">
+              <FavoriteToggle variant="button" id={v.id} title={`${title} ${v.year}`} className="h-11 gap-1 border-transparent bg-transparent px-2 text-sm" />
+              <CompareToggle variant="button" item={{ id: v.id, title, year: v.year, photo: v.photos[0]?.url }} className="h-11 gap-1 border-transparent bg-transparent px-2 text-sm" />
+              <ShareButton className="[&_button]:gap-1 [&_button]:border-transparent [&_button]:bg-transparent [&_button]:px-2 [&_button]:text-sm" url={siteUrl(canonical)} title={`${title} ${v.year}`} text={`Mira este ${title} ${v.year} por ${formatPrice(v.price, v.currency)} en TuCarroOnline:`} />
             </div>
-            <ShareButton url={siteUrl(canonical)} title={`${title} ${v.year}`} text={`Mira este ${title} ${v.year} por ${formatPrice(v.price, v.currency)} en TuCarroOnline:`} />
           </div>
 
           <div className="mt-5 rounded-xl border border-line bg-surface p-4">
@@ -284,6 +284,9 @@ export default async function VehiclePage({ params }: PageProps<"/vehiculos/[id]
                 <span className="font-bold">{v.owner.name}</span>
                 <span className="block text-sm text-muted">Vendedor particular</span>
               </p>
+            )}
+            {v.dealer?.verified && (
+              <p className="mt-3 text-xs leading-relaxed text-muted">El distintivo corresponde al dealer. No certifica una inspección ni el estado del vehículo.</p>
             )}
             <p className="mt-3 flex items-start gap-1.5 border-t border-line pt-3 text-sm text-muted">
               <MapPin className="mt-0.5 size-4 shrink-0" aria-hidden />
@@ -442,6 +445,20 @@ export default async function VehiclePage({ params }: PageProps<"/vehiculos/[id]
         </section>
       )}
       <RecentlyViewed exclude={v.id} className="mt-16 px-0 sm:px-0" />
+      {(contactPhone || callPhone) && (
+        <div className="vehicle-contact-bar fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_20px_rgb(0_0_0/0.08)] lg:hidden">
+          <div className="mx-auto flex max-w-7xl items-center justify-between gap-3">
+            <p className="min-w-0">
+              <span className="block truncate text-xs text-muted">{title} {v.year}</span>
+              <span className="block text-lg font-extrabold text-brand">{formatPrice(v.price, v.currency)}</span>
+            </p>
+            <ContactLink vehicleId={v.id} kind={contactPhone ? "WHATSAPP" : "CALL"} href={contactPhone ? whatsappUrl(contactPhone, message) : `tel:${callPhone!.replace(/[^\d+]/g, "")}`} target={contactPhone ? "_blank" : undefined} rel={contactPhone ? "noopener noreferrer" : undefined} className={cn(button("brand", "md"), "shrink-0", contactPhone && "bg-[#157f3b] text-white")}>
+              {contactPhone ? <MessageCircle className="size-5" aria-hidden /> : <Phone className="size-5" aria-hidden />}
+              {contactPhone ? "WhatsApp" : "Llamar"}
+            </ContactLink>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

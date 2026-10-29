@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Search, SlidersHorizontal } from "lucide-react";
 import { KIND_LABEL, fromParams, normalize, prepareIndex, suggest, toHref, type PreparedIndex, type SearchIndex, type Suggestion } from "@/lib/search-suggest";
 import { cn } from "@/lib/cn";
+import { button } from "@/components/ui/styles";
 import { BodySilhouette } from "./body-silhouette";
 import { BrandLogo } from "./brand-logo";
 
@@ -32,13 +33,15 @@ type Props = {
   tone?: "dark" | "light";
   placeholder?: string;
   className?: string;
+  children?: React.ReactNode;
+  submitLabel?: string;
 };
 
 /**
  * Buscador con autocompletado: entiende marca, modelo, versión, tipo, condición, combustible,
  * transmisión y año, y lleva a /vehiculos con esos filtros. Sin JS envía `q` como búsqueda libre.
  */
-export function SearchBox({ params = {}, defaultValue = "", tone = "light", placeholder = "Marca, modelo, versión o tipo: Corolla 2020", className }: Props) {
+export function SearchBox({ params = {}, defaultValue = "", tone = "light", placeholder = "Marca o modelo, por ejemplo: Corolla 2020", className, children, submitLabel = "Buscar" }: Props) {
   const router = useRouter();
   const listId = useId();
   const [query, setQuery] = useState(defaultValue);
@@ -84,55 +87,61 @@ export function SearchBox({ params = {}, defaultValue = "", tone = "light", plac
       role="search"
       action="/vehiculos"
       method="get"
-      className={cn("relative z-30", className)}
+      className={cn("relative z-30 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]", className)}
       onSubmit={(e) => {
         e.preventDefault();
         go(current?.href ?? freeText());
       }}
     >
       {Object.entries(params).map(([k, v]) => (k === "q" || k === "pagina" ? null : <input key={k} type="hidden" name={k} value={v} />))}
-      <Search
-        className={cn("pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2", tone === "dark" ? "text-white/60" : "text-muted")}
-        aria-hidden
-      />
-      <input
-        name="q"
-        type="search"
-        value={query}
-        autoComplete="off"
-        spellCheck={false}
-        placeholder={placeholder}
-        aria-label="Buscar vehículos"
-        role="combobox"
-        aria-autocomplete="list"
-        aria-expanded={open && items.length > 0}
-        aria-controls={listId}
-        aria-activedescendant={current ? `${listId}-${active}` : undefined}
-        onPointerEnter={ensureIndex}
-        onFocus={() => {
-          ensureIndex();
-          setOpen(true);
-        }}
-        onBlur={() => setOpen(false)}
-        onChange={(e) => {
-          setQuery(e.target.value);
-          setActive(0);
-          setOpen(true);
-        }}
-        onKeyDown={onKeyDown}
-        className={cn(
-          "h-13 w-full rounded-xl border pr-4 pl-12 text-base focus:outline-none [&::-webkit-search-cancel-button]:hidden",
-          tone === "dark"
-            ? "border-white/15 bg-white/10 text-white placeholder:text-white/55 focus:border-white/50"
-            : "border-line bg-surface text-ink placeholder:text-muted/70 focus:border-brand focus:ring-2 focus:ring-brand/20",
-        )}
-      />
+      <div className="relative min-w-0 flex-1">
+        <Search
+          className={cn("pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2", tone === "dark" ? "text-white/60" : "text-muted")}
+          aria-hidden
+        />
+        <input
+          name="q"
+          type="search"
+          value={query}
+          autoComplete="off"
+          spellCheck={false}
+          placeholder={placeholder}
+          aria-label="Buscar vehículos"
+          role="combobox"
+          aria-autocomplete="list"
+          aria-expanded={open && items.length > 0}
+          aria-controls={open && items.length > 0 ? listId : undefined}
+          aria-activedescendant={current ? `${listId}-${active}` : undefined}
+          onPointerEnter={ensureIndex}
+          onFocus={() => {
+            ensureIndex();
+            setOpen(true);
+          }}
+          onBlur={() => setOpen(false)}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setActive(0);
+            setOpen(true);
+          }}
+          onKeyDown={onKeyDown}
+          className={cn(
+            "h-13 w-full rounded-xl border pr-4 pl-12 text-base focus:outline-none [&::-webkit-search-cancel-button]:hidden",
+            tone === "dark"
+              ? "border-white/15 bg-white/10 text-white placeholder:text-white/55 focus:border-white/50"
+              : "border-line bg-surface text-ink placeholder:text-muted/70 focus:border-brand focus:ring-2 focus:ring-brand/20",
+          )}
+        />
+      </div>
+      <button type="submit" className={cn(button("primary", "lg"), "order-3 shrink-0 sm:order-none")}>
+        {submitLabel}
+      </button>
+      {children && <div className="order-2 sm:order-none sm:col-span-2">{children}</div>}
       <p className="sr-only" aria-live="polite">
         {open && text ? (items.length === 1 ? "1 sugerencia" : `${items.length} sugerencias`) : ""}
       </p>
 
       {open && items.length > 0 && (
-        <div className="absolute inset-x-0 top-full mt-2 overflow-hidden rounded-xl border border-line bg-surface text-ink shadow-2xl">
+        <div className={cn("absolute inset-x-0 top-13 mt-2 overflow-hidden rounded-xl border border-line bg-surface text-ink shadow-2xl", !children && "sm:right-32")}>
           {!text && <p className="px-4 pt-3 pb-1 text-xs font-semibold tracking-wide text-muted uppercase">Con más vehículos</p>}
           <ul id={listId} role="listbox" aria-label="Sugerencias" className="max-h-[min(28rem,65vh)] overflow-y-auto p-1.5">
             {items.map((s, i) => (

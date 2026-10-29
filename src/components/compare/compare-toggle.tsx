@@ -21,7 +21,7 @@ export function CompareToggle({ item, variant = "card", className }: { item: Com
       onClick={() => toggle(item)}
       className={cn(
         variant === "card"
-          ? "inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-xs font-bold shadow-sm backdrop-blur transition-colors disabled:opacity-60"
+          ? "inline-flex min-h-11 items-center gap-1.5 rounded-md px-2.5 text-xs font-bold shadow-sm backdrop-blur transition-colors disabled:opacity-60"
           : button("outline", "lg"),
         variant === "card" && (active ? "bg-brand text-brand-ink" : "bg-surface/90 text-ink hover:bg-surface"),
         variant === "button" && active && "border-brand text-brand",
