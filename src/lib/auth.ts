@@ -5,7 +5,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
-import type { Role } from "@/generated/prisma/enums";
+import type { AuthTokenKind, Role } from "@/generated/prisma/enums";
 
 export const SESSION_COOKIE = "cs_session";
 const SESSION_DAYS = 30;
@@ -51,6 +51,8 @@ export const getCurrentUser = cache(async () => {
           role: true,
           active: true,
           dealerId: true,
+          emailVerifiedAt: true,
+          alertsEnabled: true,
           dealer: { select: { id: true, name: true, slug: true, status: true, logoUrl: true } },
         },
       },
@@ -61,6 +63,31 @@ export const getCurrentUser = cache(async () => {
 });
 
 export type CurrentUser = NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>;
+
+/** Página de inicio de cada tipo de cuenta. */
+export const homeFor = (role: Role) => (role === "ADMIN" ? "/admin" : role === "BUYER" ? "/cuenta" : "/panel");
+
+/** Ruta interna a la que volver tras entrar o registrarse (`?siguiente=`); descarta URLs de otros sitios. */
+export const safeNext = (value: unknown) => (typeof value === "string" && /^\/(?![\/\\])/.test(value) && value.length <= 500 ? value : null);
+
+/** Enlace de un solo uso para el correo; reemplaza al anterior del mismo tipo. */
+export async function createAuthToken(userId: string, kind: AuthTokenKind, ttlMs: number) {
+  const token = randomBytes(32).toString("base64url");
+  await db.$transaction([
+    db.authToken.deleteMany({ where: { userId, kind } }),
+    db.authToken.create({ data: { id: hashToken(token), userId, kind, expiresAt: new Date(Date.now() + ttlMs) } }),
+  ]);
+  return token;
+}
+
+/** Usa el enlace (una sola vez) y devuelve su usuario; `null` si no existe, es de otro tipo o venció. */
+export async function consumeAuthToken(token: string, kind: AuthTokenKind) {
+  const row = await db.authToken.findUnique({ where: { id: hashToken(token) } });
+  if (!row || row.kind !== kind) return null;
+  // Borrar primero: dos usos simultáneos del mismo enlace no pasan los dos.
+  const { count } = await db.authToken.deleteMany({ where: { id: row.id } });
+  return count && row.expiresAt > new Date() ? row.userId : null;
+}
 
 export async function requireUser(...roles: Role[]): Promise<CurrentUser> {
   const user = await getCurrentUser();

@@ -24,7 +24,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     db.dealer.findMany({ where: { status: "APPROVED" }, select: { slug: true }, orderBy: { slug: "asc" } }),
   ]);
   return [
-    ...["/", "/vehiculos", "/dealers", "/financiamiento", "/planes"].map((path) => ({ url: xmlUrl(path) })),
+    ...["/", "/vehiculos", "/dealers", "/financiamiento", "/compra-segura", "/planes"].map((path) => ({ url: xmlUrl(path) })),
     ...dealers.map((dealer) => ({ url: xmlUrl(`/dealers/${dealer.slug}`) })),
     // updatedAt también cambia por visitas y tasas: no es una fecha fiable de modificación del contenido.
     ...vehicles.map((vehicle) => ({ url: xmlUrl(vehicleUrl(vehicle)), images: vehicle.photos.map((photo) => xmlUrl(photo.url)) })),

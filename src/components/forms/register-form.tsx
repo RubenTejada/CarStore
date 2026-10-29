@@ -7,17 +7,19 @@ import { cn } from "@/lib/cn";
 import { FormMessage } from "./form-message";
 import { useFormAction } from "./use-form-action";
 
-export function RegisterForm({ defaultKind, provinces }: { defaultKind: "particular" | "dealer"; provinces: string[] }) {
+export function RegisterForm({ defaultKind, provinces, next }: { defaultKind: "particular" | "dealer" | "comprador"; provinces: string[]; next?: string | null }) {
   const { state, pending, onSubmit } = useFormAction(register);
   const [kind, setKind] = useState(defaultKind);
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <FormMessage state={state} />
+      {next && <input type="hidden" name="siguiente" value={next} />}
       <fieldset>
         <legend className={label}>Tipo de cuenta</legend>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           {(
             [
+              ["comprador", "Comprador", "Guardo vehículos y recibo alertas"],
               ["particular", "Particular", "Vendo mi vehículo"],
               ["dealer", "Dealer", "Tengo un negocio de vehículos"],
             ] as const
@@ -68,9 +70,9 @@ export function RegisterForm({ defaultKind, provinces }: { defaultKind: "particu
         </div>
         <div>
           <label htmlFor="phone" className={label}>
-            Teléfono / WhatsApp
+            Teléfono / WhatsApp {kind === "comprador" && <span className="font-normal text-muted">(opcional)</span>}
           </label>
-          <input id="phone" name="phone" type="tel" autoComplete="tel" placeholder="809-555-0000" required className={input} />
+          <input id="phone" name="phone" type="tel" autoComplete="tel" placeholder="809-555-0000" required={kind !== "comprador"} className={input} />
         </div>
       </div>
       <div>

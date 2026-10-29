@@ -1,0 +1,60 @@
+name: Alertas diarias
+
+# Correo a los compradores con vehículos nuevos en sus búsquedas guardadas y rebajas de sus
+# guardados (scripts/send-alerts.ts).
+#
+# Secretos del repositorio (Settings → Secrets and variables → Actions):
+#   DATABASE_URL       base de datos de producción (nexconta-db-b, base carstore)
+#   AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID   para abrir el firewall de la base (ver deploy.yml)
+#   AZURE_COMMUNICATION_CONNECTION_STRING   recurso de Azure Communication Services
+#   EMAIL_FROM         remitente de un dominio verificado en ese recurso (DoNotReply@tucarroonline.com)
+
+on:
+  schedule:
+    # 8:30 a. m. en Santo Domingo (UTC-4).
+    - cron: "30 12 * * *"
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: daily-alerts
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      # El firewall de la base solo admite servicios de Azure: se abre a la IP de este runner.
+      - name: Abrir firewall de la base
+        run: |
+          IP=$(curl -fsS https://api.ipify.org)
+          az postgres flexible-server firewall-rule create -g nexconta --server-name nexconta-db-b \
+            -n gh-alerts-${{ github.run_id }} --start-ip-address $IP --end-ip-address $IP -o none
+      - name: Enviar alertas
+        run: npm run alerts:send
+        env:
+          NODE_ENV: production
+          SITE_URL: ${{ vars.SITE_URL || 'https://tucarroonline.com' }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          AZURE_COMMUNICATION_CONNECTION_STRING: ${{ secrets.AZURE_COMMUNICATION_CONNECTION_STRING }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+      - name: Cerrar firewall de la base
+        if: always()
+        run: |
+          az postgres flexible-server firewall-rule delete -g nexconta --server-name nexconta-db-b \
+            -n gh-alerts-${{ github.run_id }} --yes -o none || true

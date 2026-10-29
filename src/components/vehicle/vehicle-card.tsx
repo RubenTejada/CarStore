@@ -1,22 +1,42 @@
 import Image from "next/image";
 import Link from "next/link";
-import { BadgeCheck, Gauge, MapPin, Rotate3d, Star } from "lucide-react";
+import { BadgeCheck, Gauge, MapPin, Rotate3d, Star, TrendingDown } from "lucide-react";
 import type { VehicleCard as Vehicle } from "@/lib/search";
-import { CONDITION_LABEL, TRANSMISSION_LABEL, formatKm, formatPrice } from "@/lib/labels";
+import { CONDITION_LABEL, TRANSMISSION_LABEL, formatKm, formatPrice, toUsd } from "@/lib/labels";
 import { vehicleTitle, vehicleUrl } from "@/lib/urls";
 import { cn } from "@/lib/cn";
+import { priceDrop } from "@/lib/price-drop";
 import { CompareToggle } from "@/components/compare/compare-toggle";
+import { FavoriteToggle } from "@/components/saved/favorite-toggle";
 import { SpinViewer } from "./spin-viewer";
 
 const cardSizes = "(min-width: 1280px) 25vw, (min-width: 768px) 33vw, 100vw";
 
-/** Con `spin`, si el vehículo tiene giro 360 se muestra girando en lugar de la foto de portada. */
-export function VehicleCard({ v, priority = false, spin = false, className }: { v: Vehicle; priority?: boolean; spin?: boolean; className?: string }) {
+/**
+ * Con `spin`, si el vehículo tiene giro 360 se muestra girando en lugar de la foto de portada.
+ * Con `usdRate` (buscador en US$) los precios en pesos muestran su equivalente en dólares; sin él,
+ * los precios en dólares muestran su equivalente en pesos.
+ */
+export function VehicleCard({
+  v,
+  priority = false,
+  spin = false,
+  usdRate,
+  className,
+}: {
+  v: Vehicle;
+  priority?: boolean;
+  spin?: boolean;
+  usdRate?: number;
+  className?: string;
+}) {
   const photo = v.photos[0]?.url;
   const featured = v.featuredUntil && new Date(v.featuredUntil) > new Date();
   const spinning = spin && v.spinFrames.length > 0;
   const has360 = v.spinFrames.length > 0 || !!v.interiorPano;
-  // El botón de comparar va fuera del enlace (no se anidan controles) y se superpone a la foto.
+  const drop = priceDrop(v);
+  const approx = usdRate ? v.currency === "DOP" && formatPrice(toUsd(v.priceDop, usdRate), "USD") : v.currency === "USD" && formatPrice(v.priceDop, "DOP");
+  // Guardar y comparar van fuera del enlace (no se anidan controles) y se superponen a la foto.
   return (
     <div className={cn("relative", className)}>
       <Link
@@ -52,6 +72,12 @@ export function VehicleCard({ v, priority = false, spin = false, className }: { 
                 Destacado
               </span>
             )}
+            {drop && (
+              <span className="flex items-center gap-1 rounded-md bg-ok px-2 py-0.5 text-xs font-bold text-surface">
+                <TrendingDown className="size-3" aria-hidden />
+                Bajó de precio
+              </span>
+            )}
             {v.condition === "NEW" && (
               <span className="rounded-md bg-accent px-2 py-0.5 text-xs font-bold text-white">{CONDITION_LABEL.NEW}</span>
             )}
@@ -62,7 +88,16 @@ export function VehicleCard({ v, priority = false, spin = false, className }: { 
             {vehicleTitle(v)}
             {v.trim && <span className="font-normal text-muted"> {v.trim}</span>}
           </h3>
-          <p className="mt-1 text-xl font-extrabold tracking-tight text-brand">{formatPrice(v.price, v.currency)}</p>
+          <p className="mt-1 flex flex-wrap items-baseline gap-x-2">
+            <span className="text-xl font-extrabold tracking-tight text-brand">{formatPrice(v.price, v.currency)}</span>
+            {approx && <span className="text-sm text-muted">≈ {approx}</span>}
+            {drop && (
+              <s className="text-sm text-muted">
+                <span className="sr-only">Antes </span>
+                {formatPrice(v.price + drop, v.currency)}
+              </s>
+            )}
+          </p>
           <p className="mt-3 mb-4 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted">
             <span className="flex items-center gap-1">
               <Gauge className="size-4" aria-hidden />
@@ -86,7 +121,10 @@ export function VehicleCard({ v, priority = false, spin = false, className }: { 
           </p>
         </div>
       </Link>
-      <CompareToggle item={{ id: v.id, title: vehicleTitle(v), year: v.year, photo }} className="absolute top-2.5 right-2.5" />
+      <div className="absolute top-2.5 right-2.5 flex gap-1.5">
+        <FavoriteToggle id={v.id} title={`${vehicleTitle(v)} ${v.year}`} />
+        <CompareToggle item={{ id: v.id, title: vehicleTitle(v), year: v.year, photo }} />
+      </div>
     </div>
   );
 }

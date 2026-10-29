@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Eye, Pencil, Star } from "lucide-react";
+import { Eye, MessageCircle, Pencil, Star } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { accountScope } from "@/lib/listing-rules";
@@ -29,7 +29,7 @@ export default async function MyVehicles({ searchParams }: PageProps<"/panel/veh
   const vehicles = await db.vehicle.findMany({
     where: accountScope(user),
     orderBy: buildOrderBy(orden),
-    include: { model: { include: { brand: true } }, photos: { take: 1, orderBy: { position: "asc" } } },
+    include: { model: { include: { brand: true } }, photos: { take: 1, orderBy: { position: "asc" } }, _count: { select: { leads: true } } },
   });
 
   return (
@@ -83,7 +83,9 @@ export default async function MyVehicles({ searchParams }: PageProps<"/panel/veh
                     <p className="text-sm text-muted">
                       {formatPrice(v.price, v.currency)}
                       <span className="mx-2">|</span>
-                      <Eye className="inline size-3.5" aria-hidden /> {v.views}
+                      <Eye className="inline size-3.5" aria-label="Visitas" /> {v.views}
+                      <span className="mx-2">|</span>
+                      <MessageCircle className="inline size-3.5" aria-label="Contactos" /> {v._count.leads}
                     </p>
                   </div>
                   <span className={cn("rounded-full px-3 py-1 text-xs font-bold", STATUS_STYLE[v.status])}>{VEHICLE_STATUS_LABEL[v.status]}</span>

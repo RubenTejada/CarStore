@@ -5,6 +5,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import {
   BadgeCheck,
   Calendar,
+  CalendarCheck,
   Clock,
   Cog,
   DoorOpen,
@@ -16,6 +17,9 @@ import {
   Palette,
   Phone,
   Route,
+  Hash,
+  RectangleHorizontal,
+  TrendingDown,
   Users,
   Wrench,
   type LucideIcon,
@@ -23,6 +27,9 @@ import {
 import { siApple, siGooglemaps, siUber, siWaze, type SimpleIcon } from "simple-icons";
 import { db } from "@/lib/db";
 import { vehicleMetadata, vehicleStructuredData } from "@/lib/vehicle-seo";
+import { siteUrl } from "@/lib/seo";
+import { priceDrop } from "@/lib/price-drop";
+import { purchaseCosts } from "@/lib/purchase-cost";
 import { JsonLd } from "@/components/seo/json-ld";
 import { getCurrentUser } from "@/lib/auth";
 import { canEditVehicle } from "@/lib/listing-rules";
@@ -50,6 +57,14 @@ import { MapView } from "@/components/map/map-view";
 import { DealerBadge } from "@/components/dealer/dealer-badge";
 import { BodySilhouette } from "@/components/browse/body-silhouette";
 import { CompareToggle } from "@/components/compare/compare-toggle";
+import { FavoriteToggle } from "@/components/saved/favorite-toggle";
+import { TrackRecent } from "@/components/saved/track-recent";
+import { RecentlyViewed } from "@/components/saved/recently-viewed";
+import { ShareButton } from "@/components/vehicle/share-button";
+import { ContactLink } from "@/components/vehicle/contact-link";
+import { SafeBuyCard } from "@/components/vehicle/safe-buy-card";
+import { ContactRequestForm } from "@/components/vehicle/contact-request-form";
+import { testDriveWindow } from "@/lib/contact-request";
 import { LoanCalculator } from "@/components/financing/loan-calculator";
 import { button } from "@/components/ui/styles";
 import { cn } from "@/lib/cn";
@@ -64,6 +79,7 @@ const getVehicle = cache((id: string) =>
       owner: { select: { name: true, phone: true } },
       photos: { orderBy: { position: "asc" } },
       features: { include: { feature: true } },
+      priceChanges: { orderBy: { createdAt: "desc" }, take: 10 },
     },
   }));
 
@@ -107,9 +123,14 @@ export default async function VehiclePage({ params }: PageProps<"/vehiculos/[id]
     [Palette, "Color interior", v.intColor],
     [DoorOpen, "Puertas", v.doors ? String(v.doors) : null],
     [Users, "Pasajeros", v.seats ? String(v.seats) : null],
+    [RectangleHorizontal, "Placa", v.plate],
+    [Hash, "Chasis (VIN)", v.vin],
   ];
 
   const priceDop = toDop(v.price, v.currency, usd.rate);
+  const drop = priceDrop(v);
+  const testDrive = testDriveWindow();
+  const shortDate = (d: Date) => d.toLocaleDateString("es-DO", { day: "numeric", month: "short", year: "numeric", timeZone: "America/Santo_Domingo" });
   const address = v.dealer?.address ?? v.province;
   const routes = directionsUrls(v.lat, v.lng);
   const routeLinks: [SimpleIcon, string, string][] = [
@@ -126,6 +147,7 @@ export default async function VehiclePage({ params }: PageProps<"/vehiculos/[id]
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
       <JsonLd data={vehicleStructuredData(v)} />
+      {v.status === "ACTIVE" && <TrackRecent id={v.id} />}
       {v.status !== "ACTIVE" && (
         <p className="mb-4 rounded-lg border border-sun bg-sun/15 px-4 py-3 text-sm font-medium">
           Vista previa: este vehículo está en estado «{VEHICLE_STATUS_LABEL[v.status]}» y no aparece en las búsquedas.
@@ -175,10 +197,37 @@ export default async function VehiclePage({ params }: PageProps<"/vehiculos/[id]
             {v.trim && <span className="block text-xl font-semibold text-muted">{v.trim}</span>}
           </h1>
           <p className="mt-4 text-4xl font-extrabold tracking-tight text-brand">{formatPrice(v.price, v.currency)}</p>
+          {drop && v.priceDropAt && (
+            <p className="mt-1 flex flex-wrap items-center gap-x-2 text-sm">
+              <span className="flex items-center gap-1 font-bold text-ok">
+                <TrendingDown className="size-4" aria-hidden />
+                Bajó {formatPrice(drop, v.currency)}
+              </span>
+              <span className="text-muted">
+                Antes <s>{formatPrice(v.price + drop, v.currency)}</s>, rebajado el {shortDate(v.priceDropAt)}
+              </span>
+            </p>
+          )}
           {v.currency === "USD" && (
             <p className="text-sm text-muted">
               Aprox. {formatPrice(toDop(v.price, v.currency, usd.rate), "DOP")} a {formatRate(usd.rate)} por dólar{usd.publishedOn && " (tasa del Banco Central)"}
             </p>
+          )}
+
+          {v.priceChanges.length > 0 && (
+            <details className="group mt-3 text-sm">
+              <summary className="cursor-pointer font-semibold text-brand hover:underline">Historial de precio</summary>
+              <ol className="mt-2 space-y-1.5 border-l-2 border-line pl-3">
+                {v.priceChanges.map((c) => (
+                  <li key={c.id} className="flex flex-wrap gap-x-2">
+                    <span className="text-muted">{shortDate(c.createdAt)}</span>
+                    <span>
+                      {formatPrice(c.oldPrice, c.oldCurrency)} → <span className="font-semibold">{formatPrice(c.price, c.currency)}</span>
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </details>
           )}
 
           <dl className="mt-5 grid grid-cols-3 divide-x divide-line rounded-xl border border-line bg-surface text-center">
@@ -196,18 +245,26 @@ export default async function VehiclePage({ params }: PageProps<"/vehiculos/[id]
 
           <div className="mt-5 grid gap-2">
             {contactPhone && (
-              <a href={whatsappUrl(contactPhone, message)} target="_blank" rel="noopener noreferrer" className={cn(button("primary", "lg"), "bg-[#1f8a4c]")}>
+              <ContactLink vehicleId={v.id} kind="WHATSAPP" href={whatsappUrl(contactPhone, message)} target="_blank" rel="noopener noreferrer" className={cn(button("primary", "lg"), "bg-[#1f8a4c]")}>
                 <MessageCircle className="size-5" aria-hidden />
                 Escribir por WhatsApp
-              </a>
+              </ContactLink>
             )}
             {callPhone && (
-              <a href={`tel:${callPhone.replace(/[^\d+]/g, "")}`} className={button("outline", "lg")}>
+              <ContactLink vehicleId={v.id} kind="CALL" href={`tel:${callPhone.replace(/[^\d+]/g, "")}`} className={button("outline", "lg")}>
                 <Phone className="size-5" aria-hidden />
                 Llamar al {callPhone}
-              </a>
+              </ContactLink>
             )}
-            <CompareToggle variant="button" item={{ id: v.id, title, year: v.year, photo: v.photos[0]?.url }} />
+            <a href="#solicitud" className={button("outline", "lg")}>
+              <CalendarCheck className="size-5" aria-hidden />
+              Agendar prueba de manejo
+            </a>
+            <div className="grid grid-cols-2 gap-2">
+              <FavoriteToggle variant="button" id={v.id} title={`${title} ${v.year}`} />
+              <CompareToggle variant="button" item={{ id: v.id, title, year: v.year, photo: v.photos[0]?.url }} />
+            </div>
+            <ShareButton url={siteUrl(canonical)} title={`${title} ${v.year}`} text={`Mira este ${title} ${v.year} por ${formatPrice(v.price, v.currency)} en TuCarroOnline:`} />
           </div>
 
           <div className="mt-5 rounded-xl border border-line bg-surface p-4">
@@ -287,10 +344,26 @@ export default async function VehiclePage({ params }: PageProps<"/vehiculos/[id]
             </section>
           )}
 
+        {v.status === "ACTIVE" && (
+          <section id="solicitud" className="scroll-mt-24">
+            <h2 className="display text-2xl">¿Te interesa?</h2>
+            <p className="mt-1 text-muted">Deja tus datos y el vendedor te contacta, o pide una cita para probarlo.</p>
+            <div className="mt-5 max-w-2xl rounded-xl border border-line bg-surface p-5">
+              <ContactRequestForm
+                vehicleId={v.id}
+                defaults={{ name: user?.name ?? "", phone: user?.phone ?? "", email: user?.email ?? "" }}
+                minDate={testDrive.min}
+                maxDate={testDrive.max}
+              />
+            </div>
+          </section>
+        )}
+
         <section>
-          <h2 className="display text-2xl">Financiamiento</h2>
+          <h2 className="display text-2xl">Financiamiento y costo total</h2>
           <p className="mt-1 text-muted">
-            Cuota estimada sobre {formatPrice(priceDop, "DOP")} con las tasas que publican las entidades financieras.
+            Cuota estimada sobre {formatPrice(priceDop, "DOP")} con las tasas que publican las entidades financieras
+            {v.condition === "USED" ? ", más los gastos de traspaso y marbete." : ". En un vehículo nuevo, pregunta al dealer si la primera placa está incluida en el precio."}
           </p>
           <div className="mt-5">
             <LoanCalculator
@@ -299,10 +372,13 @@ export default async function VehiclePage({ params }: PageProps<"/vehiculos/[id]
               offers={financing.offers}
               price={priceDop}
               condition={v.condition}
+              costs={purchaseCosts({ condition: v.condition, year: v.year, priceDop })}
               moreHref={`/financiamiento?precio=${priceDop}&condicion=${v.condition === "NEW" ? "nuevo" : "usado"}`}
             />
           </div>
         </section>
+
+        <SafeBuyCard plate={v.plate} used={v.condition === "USED"} />
 
         <section>
           <h2 className="display text-2xl">Ubicación</h2>
@@ -365,6 +441,7 @@ export default async function VehiclePage({ params }: PageProps<"/vehiculos/[id]
           </ul>
         </section>
       )}
+      <RecentlyViewed exclude={v.id} className="mt-16 px-0 sm:px-0" />
     </div>
   );
 }

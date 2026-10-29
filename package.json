@@ -12,11 +12,13 @@
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
     "db:reset": "prisma migrate reset --force",
-    "rates:update": "tsx scripts/update-rates.ts"
+    "rates:update": "tsx scripts/update-rates.ts",
+    "alerts:send": "tsx scripts/send-alerts.ts"
   },
   "dependencies": {
     "@anthropic-ai/foundry-sdk": "^0.5.4",
     "@anthropic-ai/sdk": "^0.137.0",
+    "@azure/communication-email": "^1.1.0",
     "@googlemaps/markerclusterer": "^2.6.2",
     "@prisma/adapter-pg": "^7.10.1",
     "@prisma/client": "^7.10.1",

@@ -11,6 +11,8 @@ enum Role {
   ADMIN
   DEALER
   SELLER
+  // Comprador: guarda vehículos y búsquedas y recibe alertas; no publica.
+  BUYER
 }
 
 enum DealerStatus {
@@ -105,11 +107,19 @@ model User {
   phone        String?
   role         Role     @default(SELLER)
   active       Boolean  @default(true)
+  // Correo confirmado con el enlace de verificación: solo entonces se le envían alertas.
+  emailVerifiedAt DateTime?
+  // Alertas diarias (búsquedas guardadas y rebajas de guardados) y su enlace para darse de baja.
+  alertsEnabled Boolean @default(true)
+  alertsToken   String  @unique @default(dbgenerated("gen_random_uuid()::text"))
   dealerId     String?
   dealer       Dealer?  @relation(fields: [dealerId], references: [id], onDelete: SetNull)
   createdAt    DateTime @default(now())
 
   sessions      Session[]
+  authTokens    AuthToken[]
+  savedVehicles SavedVehicle[]
+  savedSearches SavedSearch[]
   vehicles      Vehicle[]
   importJobs    ImportJob[]
   subscriptions Subscription[] @relation("SubscriptionUser")
@@ -222,6 +232,8 @@ model Vehicle {
   lat           Float
   lng           Float
   status        VehicleStatus @default(DRAFT)
+  // Última vez que pasó a publicado: las alertas avisan de los publicados después de la última revisión.
+  publishedAt   DateTime?
   featuredUntil DateTime?
   views         Int           @default(0)
   createdAt     DateTime      @default(now())
@@ -237,8 +249,20 @@ model Vehicle {
   // Anuncio de otro portal del que se importó (ver src/lib/listing-import.ts): evita importarlo dos veces.
   sourceUrl String?
 
-  photos   VehiclePhoto[]
-  features VehicleFeature[]
+  // Placa y chasis (VIN), opcionales: permiten al comprador verificar el vehículo en la DGII (ver src/lib/vehicle-id.ts).
+  plate String?
+  vin   String?
+
+  // Rebaja vigente (ver src/lib/price-drop.ts): precio antes de rebajar, en la moneda actual, y cuándo se rebajó.
+  priceBefore Int?
+  priceDropAt DateTime?
+
+  photos       VehiclePhoto[]
+  features     VehicleFeature[]
+  priceChanges PriceChange[]
+  leads        LeadEvent[]
+  savedBy      SavedVehicle[]
+  requests     ContactRequest[]
 
   @@index([status, bodyType])
   @@index([status, priceDop])
@@ -249,6 +273,39 @@ model Vehicle {
   @@index([ownerId])
   @@index([lat, lng])
   @@index([sourceUrl])
+  @@index([status, priceDropAt])
+}
+
+// Cada cambio de precio de un anuncio, para el historial de la ficha.
+model PriceChange {
+  id          String   @id @default(cuid())
+  vehicleId   String
+  vehicle     Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  oldPrice    Int
+  oldCurrency Currency
+  price       Int
+  currency    Currency
+  createdAt   DateTime @default(now())
+
+  @@index([vehicleId, createdAt])
+}
+
+enum LeadKind {
+  WHATSAPP
+  CALL
+  // Formulario «Me interesa» (ver ContactRequest).
+  FORM
+}
+
+// Un visitante tocó «WhatsApp» o «Llamar» en la ficha: la analítica del panel del vendedor.
+model LeadEvent {
+  id        String   @id @default(cuid())
+  vehicleId String
+  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  kind      LeadKind
+  createdAt DateTime @default(now())
+
+  @@index([vehicleId, createdAt])
 }
 
 model VehiclePhoto {
@@ -376,4 +433,70 @@ model ImportJobItem {
 
   @@unique([jobId, url])
   @@index([jobId, status])
+}
+
+enum AuthTokenKind {
+  VERIFY_EMAIL
+  RESET_PASSWORD
+}
+
+// Enlaces de un solo uso que se envían por correo; se guarda el hash del token, como en Session.
+model AuthToken {
+  id        String        @id
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      AuthTokenKind
+  expiresAt DateTime
+  createdAt DateTime      @default(now())
+
+  @@index([userId, kind])
+}
+
+// Vehículos guardados de una cuenta (en el navegador viven en localStorage y se sincronizan al entrar).
+model SavedVehicle {
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vehicleId String
+  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  // Rebaja de la que ya se avisó por correo.
+  notifiedDropAt DateTime?
+
+  @@id([userId, vehicleId])
+  @@index([vehicleId])
+}
+
+// Búsqueda de /vehiculos guardada: avisa por correo de los vehículos nuevos que coinciden.
+model SavedSearch {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  // Query string de /vehiculos sin página, orden ni vista (ver src/lib/saved-search.ts).
+  query         String
+  createdAt     DateTime @default(now())
+  lastCheckedAt DateTime @default(now())
+
+  @@unique([userId, query])
+}
+
+enum ContactRequestKind {
+  INFO
+  TEST_DRIVE
+}
+
+// Solicitud «Me interesa» o de prueba de manejo enviada desde la ficha; le llega al vendedor por correo y en su panel.
+model ContactRequest {
+  id            String             @id @default(cuid())
+  vehicleId     String
+  vehicle       Vehicle            @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  kind          ContactRequestKind
+  name          String
+  phone         String
+  email         String?
+  message       String?
+  preferredDate DateTime?          @db.Date
+  createdAt     DateTime           @default(now())
+
+  @@index([vehicleId, createdAt])
 }

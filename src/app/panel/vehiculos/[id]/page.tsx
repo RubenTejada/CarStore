@@ -16,7 +16,7 @@ export default async function EditVehicle({ params }: PageProps<"/panel/vehiculo
     include: { model: { include: { brand: true } }, photos: { orderBy: { position: "asc" } }, features: { include: { feature: true } } },
   });
   if (!v || !canEditVehicle(user, v)) notFound();
-  const { brands, features, featuredHint } = await getVehicleFormData(user);
+  const { brands, features, featuredHint, aiDescription } = await getVehicleFormData(user);
   return (
     <div className="max-w-5xl">
       <PageTitle title={`Editar ${vehicleTitle(v)} ${v.year}`} />
@@ -26,6 +26,7 @@ export default async function EditVehicle({ params }: PageProps<"/panel/vehiculo
         features={features}
         provinces={PROVINCE_NAMES}
         featuredHint={featuredHint}
+        aiDescription={aiDescription}
         values={{
           modelId: v.modelId,
           brandId: v.model.brandId,
@@ -46,6 +47,8 @@ export default async function EditVehicle({ params }: PageProps<"/panel/vehiculo
           doors: v.doors ?? "",
           seats: v.seats ?? "",
           description: v.description ?? "",
+          plate: v.plate ?? "",
+          vin: v.vin ?? "",
           province: v.province,
           lat: v.lat,
           lng: v.lng,

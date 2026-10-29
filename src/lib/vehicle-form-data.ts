@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { getQuota } from "@/lib/listing-rules";
 import type { CurrentUser } from "@/lib/auth";
 import type { VehicleFormValues } from "@/components/forms/vehicle-form";
+import { isClaudeConfigured } from "@/lib/claude";
 
 /** Catálogos y valores por defecto del formulario de vehículo. */
 export async function getVehicleFormData(user: CurrentUser) {
@@ -47,5 +48,5 @@ export async function getVehicleFormData(user: CurrentUser) {
     features: [],
     featured: false,
   };
-  return { brands, features, defaults, featuredHint };
+  return { brands, features, defaults, featuredHint, aiDescription: isClaudeConfigured() };
 }

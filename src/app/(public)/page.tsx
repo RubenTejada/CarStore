@@ -10,6 +10,7 @@ import { formatPrice } from "@/lib/labels";
 import { VehicleFinder } from "@/components/browse/vehicle-finder";
 import { BrandTileBody, brandCell, brandGrid, brandTile } from "@/components/browse/brand-logo";
 import { VehicleCard } from "@/components/vehicle/vehicle-card";
+import { RecentlyViewed } from "@/components/saved/recently-viewed";
 import { SectionPlayToggle, SpinPlayback } from "@/components/vehicle/play-toggle";
 import { MapView } from "@/components/map/map-view";
 import { DealerBadge } from "@/components/dealer/dealer-badge";
@@ -85,6 +86,8 @@ export default async function HomePage() {
         </section>
         </SpinPlayback>
       )}
+
+      <RecentlyViewed className="pt-16" />
 
       <section className="mx-auto max-w-7xl px-4 pt-20 sm:px-6">
         <h2 className="display text-3xl">Marcas</h2>

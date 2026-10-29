@@ -19,6 +19,11 @@ export function toDop(price: number, currency: Currency, rate = USD_TO_DOP) {
   return currency === "USD" ? Math.round(price * rate) : price;
 }
 
+/** Equivalente aproximado en dólares, redondeado a US$100. */
+export function toUsd(priceDop: number, rate = USD_TO_DOP) {
+  return Math.round(priceDop / rate / 100) * 100;
+}
+
 /** Tasa USD→DOP para mostrar: "RD$61.83". */
 export function formatRate(rate: number) {
   return `RD$${rate.toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -96,6 +101,7 @@ export const ROLE_LABEL: Record<Role, string> = {
   ADMIN: "Administrador",
   DEALER: "Dealer",
   SELLER: "Particular",
+  BUYER: "Comprador",
 };
 
 export const COLORS = [

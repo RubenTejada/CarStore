@@ -5,11 +5,12 @@ import { login } from "@/app/actions/auth";
 import { button, input, label } from "@/components/ui/styles";
 import { FormMessage } from "./form-message";
 
-export function LoginForm() {
+export function LoginForm({ next }: { next?: string | null }) {
   const [state, action, pending] = useActionState(login, undefined);
   return (
     <form action={action} className="space-y-4">
       <FormMessage state={state} />
+      {next && <input type="hidden" name="siguiente" value={next} />}
       <div>
         <label htmlFor="email" className={label}>
           Correo electrónico

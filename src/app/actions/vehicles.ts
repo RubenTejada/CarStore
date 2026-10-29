@@ -10,6 +10,11 @@ import { canEditVehicle, evaluatePublish, getActiveSubscription, getQuota } from
 import { PROVINCE_NAMES } from "@/lib/provinces";
 import { slugify, toDop } from "@/lib/labels";
 import { getUsdRate } from "@/lib/exchange-rate";
+import { nextPriceDrop } from "@/lib/price-drop";
+import { normalizePlate, normalizeVin } from "@/lib/vehicle-id";
+import { CLAUDE_MODEL, getClaudeClient, isClaudeConfigured, refusalFallback } from "@/lib/claude";
+import { takeToken } from "@/lib/rate-limit";
+import { DESCRIPTION_SYSTEM, vehicleFacts } from "@/lib/vehicle-description";
 import { BodyType, Condition, Currency, Drivetrain, Fuel, Transmission, VehicleStatus } from "@/generated/prisma/enums";
 import { SPIN_MAX_FRAMES, SPIN_MIN_FRAMES } from "@/lib/labels";
 import type { FormState } from "./auth";
@@ -57,6 +62,16 @@ const vehicleSchema = z.object({
   doors: optionalInt(1, 6),
   seats: optionalInt(1, 20),
   description: optionalText(4000),
+  plate: z
+    .string()
+    .max(20)
+    .transform(normalizePlate)
+    .refine((v) => v !== undefined, "La placa debe tener la forma A123456"),
+  vin: z
+    .string()
+    .max(30)
+    .transform(normalizeVin)
+    .refine((v) => v !== undefined, "El chasis (VIN) tiene 17 letras y números"),
   province: z.string().refine((p) => PROVINCE_NAMES.includes(p), "Selecciona la provincia"),
   lat: z.coerce.number().min(17.3).max(20.1, "La ubicación debe estar en República Dominicana"),
   lng: z.coerce.number().min(-72.1).max(-68.2, "La ubicación debe estar en República Dominicana"),
@@ -75,7 +90,10 @@ const vehicleSchema = z.object({
 const sellerOnly = () => requireUser("DEALER", "SELLER", "ADMIN");
 
 async function loadEditable(user: CurrentUser, id: string) {
-  const vehicle = await db.vehicle.findUnique({ where: { id }, select: { id: true, ownerId: true, dealerId: true, status: true, featuredUntil: true, spinFrames: true } });
+  const vehicle = await db.vehicle.findUnique({
+    where: { id },
+    select: { id: true, ownerId: true, dealerId: true, status: true, featuredUntil: true, spinFrames: true, price: true, currency: true, priceBefore: true, priceDropAt: true },
+  });
   if (!vehicle || !canEditVehicle(user, vehicle)) return null;
   return vehicle;
 }
@@ -87,6 +105,8 @@ export async function saveVehicle(id: string | null, _: FormState, form: FormDat
     trim: "",
     interiorPano: "",
     sourceUrl: "",
+    plate: "",
+    vin: "",
     ...Object.fromEntries([...form.entries()].filter(([k]) => k !== "photos" && k !== "spinFrames" && k !== "features")),
     photos: form.getAll("photos"),
     spinFrames: form.getAll("spinFrames"),
@@ -147,6 +167,8 @@ export async function saveVehicle(id: string | null, _: FormState, form: FormDat
     doors: d.doors,
     seats: d.seats,
     description: d.description,
+    plate: d.plate ?? null,
+    vin: d.vin ?? null,
     province: d.province,
     lat: d.lat,
     lng: d.lng,
@@ -156,6 +178,7 @@ export async function saveVehicle(id: string | null, _: FormState, form: FormDat
     interiorPano: d.interiorPano,
     status: activate ? VehicleStatus.ACTIVE : VehicleStatus.DRAFT,
     featuredUntil,
+    ...(existing && nextPriceDrop(existing, d)),
     // Solo lo envía el formulario de un anuncio importado; al editar se conserva el que ya tenía.
     ...(d.sourceUrl && { sourceUrl: d.sourceUrl }),
   };
@@ -168,6 +191,8 @@ export async function saveVehicle(id: string | null, _: FormState, form: FormDat
     await tx.vehiclePhoto.createMany({ data: d.photos.map((url, position) => ({ vehicleId: vehicle.id, url, position })) });
     await tx.vehicleFeature.deleteMany({ where: { vehicleId: vehicle.id } });
     await tx.vehicleFeature.createMany({ data: features.map((f) => ({ vehicleId: vehicle.id, featureId: f.id })) });
+    if (existing && (existing.price !== d.price || existing.currency !== d.currency))
+      await tx.priceChange.create({ data: { vehicleId: vehicle.id, oldPrice: existing.price, oldCurrency: existing.currency, price: d.price, currency: d.currency } });
   });
 
   inventoryChanged();
@@ -225,4 +250,61 @@ export async function deleteVehicle(id: string): Promise<FormState> {
   inventoryChanged();
   revalidatePath("/", "layout");
   return { ok: "Vehículo eliminado." };
+}
+
+const describeSchema = z.object({
+  modelId: z.string().min(1, "Elige la marca y el modelo primero."),
+  trimId: z.string().catch(""),
+  trim: z.string().max(60).catch(""),
+  year: z.coerce.number().int().min(1950).max(new Date().getFullYear() + 1).catch(new Date().getFullYear()),
+  condition: z.enum(Condition).catch("USED"),
+  mileageKm: z.coerce.number().int().min(0).max(2_000_000).nullable().catch(null),
+  transmission: z.enum(Transmission).nullable().catch(null),
+  fuel: z.enum(Fuel).nullable().catch(null),
+  drivetrain: z.enum(Drivetrain).nullable().catch(null),
+  engine: z.string().max(60).catch(""),
+  extColor: z.string().max(30).catch(""),
+  intColor: z.string().max(30).catch(""),
+  doors: z.coerce.number().int().min(1).max(6).nullable().catch(null),
+  seats: z.coerce.number().int().min(1).max(20).nullable().catch(null),
+  description: z.string().max(4000).catch(""),
+});
+
+/** Redacta la descripción del anuncio con Claude a partir de lo que el vendedor llenó; no guarda nada. */
+export async function describeVehicle(form: FormData): Promise<{ text?: string; error?: string }> {
+  const user = await sellerOnly();
+  if (!isClaudeConfigured()) return { error: "La redacción automática no está disponible en este momento." };
+  const parsed = describeSchema.safeParse(Object.fromEntries([...form.entries()].filter(([k]) => k !== "features" && k !== "photos" && k !== "spinFrames")));
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  const d = parsed.data;
+  if (!takeToken(`describe:${user.id}`, 20, 3_600_000)) return { error: "Pediste muchas descripciones seguidas. Intenta de nuevo en un rato." };
+
+  const [model, trim, features] = await Promise.all([
+    db.model.findUnique({ where: { id: d.modelId }, select: { name: true, brand: { select: { name: true } } } }),
+    d.trimId ? db.trim.findFirst({ where: { id: d.trimId, modelId: d.modelId }, select: { name: true } }) : null,
+    db.feature.findMany({ where: { slug: { in: form.getAll("features").map(String).slice(0, 80) } }, orderBy: { name: "asc" }, select: { name: true } }),
+  ]);
+  if (!model) return { error: "Elige la marca y el modelo primero." };
+  const facts = vehicleFacts({
+    ...d,
+    title: [model.brand.name, model.name, trim?.name ?? d.trim.trim()].filter(Boolean).join(" "),
+    features: features.map((f) => f.name),
+  });
+
+  try {
+    const msg = await getClaudeClient().beta.messages.create({
+      model: CLAUDE_MODEL,
+      max_tokens: 4_000,
+      ...refusalFallback(),
+      output_config: { effort: "low" },
+      system: DESCRIPTION_SYSTEM,
+      messages: [{ role: "user", content: `${facts}${d.description.trim() ? `\n\nDescripción del vendedor:\n${d.description.trim()}` : ""}` }],
+    });
+    const text = msg.content.flatMap((b) => (b.type === "text" ? [b.text] : [])).join("").trim();
+    if (msg.stop_reason === "refusal" || !text) return { error: "No se pudo redactar la descripción. Escríbela tú o intenta de nuevo." };
+    return { text: text.slice(0, 4000) };
+  } catch (error) {
+    console.error("[descripción IA]", error);
+    return { error: "No se pudo redactar la descripción. Intenta de nuevo." };
+  }
 }
