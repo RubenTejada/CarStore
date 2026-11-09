@@ -99,6 +99,13 @@ enum SubscriptionStatus {
   REJECTED
 }
 
+// TRANSFER: el cliente transfiere y escribe la referencia. PAYONEER_LINK: el operador le envía una
+// solicitud de pago de Payoneer por `chargeUsdCents` y el cliente paga con tarjeta en Payoneer.
+enum PaymentMethod {
+  TRANSFER
+  PAYONEER_LINK
+}
+
 model User {
   id              String    @id @default(cuid())
   email           String    @unique
@@ -370,20 +377,23 @@ model Plan {
 // Una suscripción pertenece a un dealer (cupo compartido por sus usuarios)
 // o a un vendedor particular (userId sin dealerId).
 model Subscription {
-  id           String             @id @default(cuid())
-  planId       String
-  plan         Plan               @relation(fields: [planId], references: [id])
-  userId       String
-  user         User               @relation("SubscriptionUser", fields: [userId], references: [id], onDelete: Cascade)
-  dealerId     String?
-  dealer       Dealer?            @relation(fields: [dealerId], references: [id], onDelete: Cascade)
-  status       SubscriptionStatus @default(PENDING)
-  paymentRef   String?
-  startsAt     DateTime?
-  endsAt       DateTime?
-  approvedById String?
-  approvedBy   User?              @relation("SubscriptionApprover", fields: [approvedById], references: [id], onDelete: SetNull)
-  createdAt    DateTime           @default(now())
+  id             String             @id @default(cuid())
+  planId         String
+  plan           Plan               @relation(fields: [planId], references: [id])
+  userId         String
+  user           User               @relation("SubscriptionUser", fields: [userId], references: [id], onDelete: Cascade)
+  dealerId       String?
+  dealer         Dealer?            @relation(fields: [dealerId], references: [id], onDelete: Cascade)
+  status         SubscriptionStatus @default(PENDING)
+  paymentMethod  PaymentMethod      @default(TRANSFER)
+  paymentRef     String?
+  // PAYONEER_LINK: importe a cobrar en centavos de USD, calculado con la tasa del BCRD al solicitar el plan.
+  chargeUsdCents Int?
+  startsAt       DateTime?
+  endsAt         DateTime?
+  approvedById   String?
+  approvedBy     User?              @relation("SubscriptionApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  createdAt      DateTime           @default(now())
 
   @@index([dealerId, status])
   @@index([userId, status])

@@ -150,6 +150,11 @@ export function formatPrice(price: number, currency: Currency) {
   return currency === "USD" ? `US${usd.format(price)}` : dop.format(price);
 }
 
+/** Importe en USD con centavos: es lo que se cobra en la solicitud de pago de Payoneer. */
+export function formatUsdCents(cents: number) {
+  return `US${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 }).format(cents / 100)}`;
+}
+
 export function formatKm(km: number) {
   return `${new Intl.NumberFormat("es-DO").format(km)} km`;
 }

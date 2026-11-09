@@ -1,7 +1,7 @@
 // Cambiar la versión al modificar los textos o el alcance de las autorizaciones.
 // Conservar cada versión publicada en el historial del repositorio.
-export const LEGAL_VERSION = "2026-11-01";
-export const LEGAL_DATE = "1 de noviembre de 2026";
+export const LEGAL_VERSION = "2026-11-09";
+export const LEGAL_DATE = "9 de noviembre de 2026";
 
 export const LEGAL_DOCUMENTS = {
   terminos: { title: "Términos de uso", description: "Condiciones de las cuentas, anuncios y uso de TuCarroOnline." },
