@@ -5,6 +5,7 @@ import { SUBSCRIPTION_STATUS_LABEL, formatPrice } from "@/lib/labels";
 import { PageTitle } from "@/components/panel/shell";
 import { PlanRequestForm } from "@/components/forms/plan-request-form";
 import { card } from "@/components/ui/styles";
+import { legalOperatorReady } from "@/lib/legal";
 
 const fmt = (d: Date | null) => (d ? d.toLocaleDateString("es-DO", { day: "numeric", month: "short", year: "numeric" }) : "—");
 
@@ -28,7 +29,7 @@ export default async function MyPlan() {
       />
       <section className={`${card} p-6`}>
         <h2 className="wide mb-4 text-lg font-bold">{quota.endsAt ? "Renovar o mejorar" : "Mejorar mi plan"}</h2>
-        <PlanRequestForm plans={plans} />
+        {legalOperatorReady() ? <PlanRequestForm plans={plans} /> : <p className="text-sm leading-relaxed">Los planes pagados no están disponibles hasta completar la identificación y el contacto legal del operador. No realices transferencias. Puedes seguir usando el plan Gratis.</p>}
       </section>
       {subs.length > 0 && (
         <section className={`${card} mt-8 overflow-x-auto`}>

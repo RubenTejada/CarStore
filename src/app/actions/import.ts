@@ -15,10 +15,12 @@ import { FetchError, parsePublicUrl } from "@/lib/safe-fetch";
 import { isClaudeConfigured } from "@/lib/claude";
 import type { VehicleFormValues } from "@/components/forms/vehicle-form";
 import type { FormState } from "./auth";
+import { legalFields } from "@/lib/legal-validation";
+import { LEGAL_VERSION } from "@/lib/legal";
 
 const importSchema = z.object({
   url: z.string().trim().min(1, "Pega el enlace del anuncio.").max(2000),
-  owner: z.literal("on", { error: "Confirma que el anuncio es tuyo o de tu dealer." }),
+  ...legalFields,
 });
 
 const NOT_CONFIGURED = "La importación desde otros portales no está disponible en este momento.";
@@ -46,6 +48,7 @@ export async function importListing(_: ImportListingState, form: FormData): Prom
   if (checked.error) return { error: checked.error };
 
   try {
+    await db.legalAcceptance.create({ data: { userId: user.id, kind: "IMPORT", version: LEGAL_VERSION, details: { sourceUrl: checked.url! } } });
     const listing = await readListing(checked.url!, await loadImportCatalog());
     const existing = await db.vehicle.findFirst({ where: { ...accountScope(user), sourceUrl: { in: [checked.url!, listing.sourceUrl] } }, select: { id: true } });
     if (existing) return { error: "Ya importaste este anuncio. Búscalo en «Mis vehículos»." };
@@ -109,7 +112,11 @@ export async function startInventoryImport(_: FormState, form: FormData): Promis
   });
   if (active) return { error: "Ya hay una importación en curso. Espera a que termine." };
 
-  const job = await db.importJob.create({ data: { dealerId: user.dealerId, userId: user.id, url: checked.url! }, select: { id: true } });
+  const job = await db.$transaction(async (tx) => {
+    const created = await tx.importJob.create({ data: { dealerId: user.dealerId!, userId: user.id, url: checked.url! }, select: { id: true } });
+    await tx.legalAcceptance.create({ data: { userId: user.id, kind: "IMPORT", version: LEGAL_VERSION, subjectId: created.id, details: { sourceUrl: checked.url! } } });
+    return created;
+  });
   const { rate } = await getUsdRate();
   after(() => runImportJob(job.id, rate).catch((e) => console.error("Importación de inventario", job.id, e)));
   revalidatePath("/panel/vehiculos/importar");
@@ -121,6 +128,8 @@ export async function resumeImportJob(id: string): Promise<FormState> {
   const user = await requireUser("DEALER");
   const job = await db.importJob.findFirst({ where: { id, dealerId: user.dealerId ?? "" }, select: { id: true, status: true, updatedAt: true } });
   if (!job || (job.status !== "DISCOVERING" && job.status !== "RUNNING")) return { error: "Esta importación no se puede reanudar." };
+  if (!(await db.legalAcceptance.findFirst({ where: { kind: "IMPORT", subjectId: job.id, version: LEGAL_VERSION } })))
+    return { error: "Esta importación requiere una nueva autorización de derechos. Inicia una nueva solicitud aceptando la política vigente." };
   if (job.updatedAt > new Date(Date.now() - STALE_MS)) return { error: "La importación sigue en curso." };
   await db.importJob.update({ where: { id }, data: { updatedAt: new Date() } });
   const { rate } = await getUsdRate();

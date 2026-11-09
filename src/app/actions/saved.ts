@@ -8,6 +8,7 @@ import { MAX_SAVED, cleanIds } from "@/lib/saved";
 import { MAX_SAVED_SEARCHES, savedSearchQuery } from "@/lib/saved-search";
 import { parseSearchParams } from "@/lib/search-params";
 import type { FormState } from "./auth";
+import { LEGAL_VERSION } from "@/lib/legal";
 
 /**
  * Guardados de la cuenta. Con `localIds` (la primera vez en este navegador) suma los del navegador;
@@ -15,7 +16,7 @@ import type { FormState } from "./auth";
  */
 export async function syncSaved(localIds: string[]): Promise<string[] | null> {
   const user = await getCurrentUser();
-  if (!user) return null;
+  if (!user || user.legalVersion !== LEGAL_VERSION) return null;
   const ids = cleanIds(Array.isArray(localIds) ? localIds : [], MAX_SAVED);
   if (ids.length) {
     const live = await db.vehicle.findMany({ where: { id: { in: ids }, status: "ACTIVE" }, select: { id: true } });
@@ -33,7 +34,7 @@ export async function syncSaved(localIds: string[]): Promise<string[] | null> {
 /** Guarda o quita un vehículo de la cuenta (el corazón ya cambió en el navegador). */
 export async function setSaved(vehicleId: string, saved: boolean): Promise<void> {
   const user = await getCurrentUser();
-  if (!user || typeof vehicleId !== "string" || !ID_RE.test(vehicleId)) return;
+  if (!user || user.legalVersion !== LEGAL_VERSION || typeof vehicleId !== "string" || !ID_RE.test(vehicleId)) return;
   if (!saved) {
     await db.savedVehicle.deleteMany({ where: { userId: user.id, vehicleId } });
     return;
@@ -55,7 +56,7 @@ export async function saveSearch(query: string, name: string): Promise<FormState
     await db.savedSearch.create({ data: { userId: user.id, query: canonical, name: String(name).trim().slice(0, 120) || "Mi búsqueda" } });
   }
   revalidatePath("/cuenta");
-  return { ok: user.emailVerifiedAt ? "Alerta creada: te avisaremos por correo de los vehículos nuevos." : "Alerta creada. Confirma tu correo para recibir los avisos." };
+  return { ok: !user.alertsEnabled ? "Búsqueda guardada. Activa las alertas desde tu cuenta si quieres recibir avisos por correo." : user.emailVerifiedAt ? "Alerta creada: te avisaremos por correo de los vehículos nuevos." : "Alerta creada. Confirma tu correo para recibir los avisos." };
 }
 
 export async function deleteSearch(id: string): Promise<FormState> {

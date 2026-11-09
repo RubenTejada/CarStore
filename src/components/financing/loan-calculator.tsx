@@ -143,7 +143,7 @@ export function LoanCalculator({ offers, price: initialPrice, condition: initial
                   <dd className="text-xs text-muted">Inicial más gastos</dd>
                 </div>
                 <div>
-                  <dt className="text-muted">Costo total</dt>
+                  <dt className="text-muted">Subtotal estimado</dt>
                   <dd className="font-semibold">{money(price + quote.totalInterest + fees)}</dd>
                   <dd className="text-xs text-muted">Precio, intereses y gastos</dd>
                 </div>
@@ -171,7 +171,7 @@ export function LoanCalculator({ offers, price: initialPrice, condition: initial
         )}
         <p className="mt-4 flex gap-1.5 text-xs text-muted">
           <Info className="mt-px size-3.5 shrink-0" aria-hidden />
-          Estimación con tasas de referencia. No incluye seguro del vehículo, seguro de vida ni gastos de cierre; la tasa final la fija la entidad según tu perfil.
+          <span>Simulación informativa de capital e intereses; no es oferta ni aprobación de crédito. Excluye seguros, comisiones y gastos de cierre. Las tasas pueden variar y la entidad decide las condiciones. <Link href="/legal/avisos" className="underline">Alcance de los cálculos</Link></span>
         </p>
       </div>
 

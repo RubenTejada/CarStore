@@ -1,0 +1,61 @@
+name: Métricas de redes sociales
+
+# Lee de Meta el alcance y las interacciones de las publicaciones de los dealers en Facebook e
+# Instagram (scripts/social-metrics.ts) para el panel «Redes sociales».
+#
+# Secretos del repositorio (Settings → Secrets and variables → Actions):
+#   DATABASE_URL       base de datos de producción (nexconta-db-b, base carstore)
+#   AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID   para abrir el firewall de la base (ver deploy.yml)
+#   META_APP_ID, META_APP_SECRET   app de Meta del portal
+#   SOCIAL_TOKEN_KEY   la misma clave con que App Service cifra los tokens de las páginas
+
+on:
+  schedule:
+    # Cada 6 horas.
+    - cron: "15 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: social-metrics
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      # El firewall de la base solo admite servicios de Azure: se abre a la IP de este runner.
+      - name: Abrir firewall de la base
+        run: |
+          IP=$(curl -fsS https://api.ipify.org)
+          az postgres flexible-server firewall-rule create -g nexconta --server-name nexconta-db-b \
+            -n gh-social-${{ github.run_id }} --start-ip-address $IP --end-ip-address $IP -o none
+      - name: Leer métricas
+        run: npm run social:metrics
+        env:
+          NODE_ENV: production
+          SITE_URL: ${{ vars.SITE_URL || 'https://tucarroonline.com' }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          META_APP_ID: ${{ secrets.META_APP_ID }}
+          META_APP_SECRET: ${{ secrets.META_APP_SECRET }}
+          SOCIAL_TOKEN_KEY: ${{ secrets.SOCIAL_TOKEN_KEY }}
+      - name: Cerrar firewall de la base
+        if: always()
+        run: |
+          az postgres flexible-server firewall-rule delete -g nexconta --server-name nexconta-db-b \
+            -n gh-social-${{ github.run_id }} --yes -o none || true

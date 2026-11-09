@@ -17,7 +17,7 @@ export const metadata: Metadata = pageMetadata({
 const DEFAULT_PRICE = 1_500_000;
 
 const TIPS: [string, string][] = [
-  ["Tasa nominal y TAE", "La tasa «desde» es la nominal anual de referencia. La TAE suma el efecto de la capitalización mensual y es la que permite comparar el costo real entre entidades."],
+  ["Tasa nominal y TAE", "La tasa «desde» es la nominal anual de referencia. La TAE publicada depende del método y las condiciones de la entidad; no sustituye una cotización con todos los seguros, comisiones y gastos de tu préstamo."],
   ["Inicial", "Cada entidad financia un porcentaje del valor del vehículo (tasado, en los usados). Un inicial mayor baja la cuota y, a menudo, la tasa que te ofrecen."],
   ["Costos además de la cuota", "Seguro del vehículo (endosado a la entidad), seguro de vida sobre el saldo, gastos legales del contrato de prenda o venta condicional y, en usados, la tasación."],
   ["Documentos habituales", "Cédula, carta de trabajo o comprobante de ingresos, estados de cuenta recientes y la cotización o factura proforma del vehículo."],
@@ -37,7 +37,7 @@ export default async function FinancingPage({ searchParams }: PageProps<"/financ
       <PageHeader
         large
         title="Financiamiento de vehículos"
-        description="Calcula tu cuota y compárala entre las entidades financieras con las tasas que publican en sus sitios oficiales, verificadas cada día."
+        description="Calcula una cuota orientativa con las tasas publicadas por las entidades. Consulta la fecha de lectura y confirma las condiciones directamente con cada entidad."
       />
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
         <section>

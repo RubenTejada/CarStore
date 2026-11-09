@@ -7,6 +7,7 @@ import { button, card, input } from "@/components/ui/styles";
 import { cn } from "@/lib/cn";
 import { VehicleForm, type VehicleFormProps } from "./vehicle-form";
 import { useFormAction } from "./use-form-action";
+import { LegalAcceptance, LegalLink } from "@/components/legal/acceptance";
 
 /**
  * «Publicar vehículo» con la opción de partir de un anuncio de otro portal: al importar, el
@@ -37,10 +38,8 @@ export function ListingImporter(props: VehicleFormProps) {
               {pending ? "Importando…" : "Importar"}
             </button>
           </div>
-          <label className="flex items-start gap-2 text-sm text-muted">
-            <input type="checkbox" name="owner" required className="mt-0.5 size-4 accent-[var(--brand)]" />
-            Confirmo que el anuncio es mío o de mi dealer.
-          </label>
+          <LegalAcceptance>Confirmo que tengo facultad para ofrecer el vehículo y autorización para copiar y republicar los textos y fotografías; he comprobado que la importación respeta las condiciones del sitio de origen. Acepto la <LegalLink doc="publicaciones">Política de publicaciones e importación</LegalLink>.</LegalAcceptance>
+          <p className="text-xs text-muted">El contenido de la página se procesa mediante Claude (Anthropic o Microsoft Foundry). No importes datos sensibles ni de terceros sin autorización. Revisa el resultado antes de publicar.</p>
           {pending && (
             <p role="status" className="text-sm text-muted">
               Leyendo el anuncio y copiando las fotos. Puede tardar hasta un minuto.

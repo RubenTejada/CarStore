@@ -8,6 +8,7 @@ import { button, input, label } from "@/components/ui/styles";
 import { cn } from "@/lib/cn";
 import { FormMessage } from "./form-message";
 import { useFormAction } from "./use-form-action";
+import { LegalAcceptance, LegalLink } from "@/components/legal/acceptance";
 
 export function RegisterForm({ defaultKind, provinces, next }: { defaultKind: "particular" | "dealer" | "comprador"; provinces: string[]; next?: string | null }) {
   const { state, pending, onSubmit } = useFormAction(register);
@@ -97,6 +98,11 @@ export function RegisterForm({ defaultKind, provinces, next }: { defaultKind: "p
         <p className="mt-1 text-xs text-muted">Mínimo 8 caracteres.</p>
       </div>
       {kind === "dealer" && <p className="text-sm text-muted">La administración revisa cada dealer antes de que pueda publicar.</p>}
+      <LegalAcceptance>Declaro que tengo al menos 18 años y, si represento un dealer, facultad para hacerlo. Acepto los <LegalLink doc="terminos">Términos de uso</LegalLink> y autorizo el tratamiento necesario para mi cuenta descrito en la <LegalLink doc="privacidad">Política de privacidad</LegalLink>. Si vendo, autorizo mostrar mi teléfono y los datos de contacto del dealer en mis publicaciones.</LegalAcceptance>
+      <label className="flex items-start gap-3 text-sm leading-relaxed">
+        <input type="checkbox" name="alerts" className="mt-1 size-4 shrink-0 accent-[var(--brand)]" />
+        Quiero recibir por correo alertas de mis búsquedas y rebajas de vehículos guardados (opcional). Puedo darme de baja desde mi cuenta o desde cada correo.
+      </label>
       <button type="submit" disabled={pending} className={`${button("brand", "lg")} w-full`}>
         {pending ? "Creando cuenta…" : "Crear cuenta"}
       </button>

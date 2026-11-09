@@ -100,30 +100,32 @@ enum SubscriptionStatus {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  passwordHash String
-  name         String
-  phone        String?
-  role         Role     @default(SELLER)
-  active       Boolean  @default(true)
+  id              String    @id @default(cuid())
+  email           String    @unique
+  passwordHash    String
+  name            String
+  phone           String?
+  role            Role      @default(SELLER)
+  active          Boolean   @default(true)
   // Correo confirmado con el enlace de verificación: solo entonces se le envían alertas.
   emailVerifiedAt DateTime?
   // Alertas diarias (búsquedas guardadas y rebajas de guardados) y su enlace para darse de baja.
-  alertsEnabled Boolean @default(true)
-  alertsToken   String  @unique @default(dbgenerated("gen_random_uuid()::text"))
-  dealerId     String?
-  dealer       Dealer?  @relation(fields: [dealerId], references: [id], onDelete: SetNull)
-  createdAt    DateTime @default(now())
+  alertsEnabled   Boolean   @default(false)
+  alertsToken     String    @unique @default(dbgenerated("gen_random_uuid()::text"))
+  dealerId        String?
+  dealer          Dealer?   @relation(fields: [dealerId], references: [id], onDelete: SetNull)
+  createdAt       DateTime  @default(now())
+  legalVersion    String?
 
-  sessions      Session[]
-  authTokens    AuthToken[]
-  savedVehicles SavedVehicle[]
-  savedSearches SavedSearch[]
-  vehicles      Vehicle[]
-  importJobs    ImportJob[]
-  subscriptions Subscription[] @relation("SubscriptionUser")
-  approvals     Subscription[] @relation("SubscriptionApprover")
+  sessions         Session[]
+  authTokens       AuthToken[]
+  savedVehicles    SavedVehicle[]
+  savedSearches    SavedSearch[]
+  vehicles         Vehicle[]
+  importJobs       ImportJob[]
+  subscriptions    Subscription[]    @relation("SubscriptionUser")
+  approvals        Subscription[]    @relation("SubscriptionApprover")
+  legalAcceptances LegalAcceptance[]
 
   @@index([dealerId])
 }
@@ -139,29 +141,33 @@ model Session {
 }
 
 model Dealer {
-  id          String       @id @default(cuid())
-  slug        String       @unique
-  name        String
-  logoUrl     String?
-  coverUrl    String?
-  description String?
-  phone       String?
-  whatsapp    String?
-  email       String?
-  website     String?
-  hours       String?
-  address     String?
-  province    String
-  lat         Float
-  lng         Float
-  status      DealerStatus @default(PENDING)
-  verified    Boolean      @default(false)
-  createdAt   DateTime     @default(now())
+  id           String       @id @default(cuid())
+  slug         String       @unique
+  name         String
+  logoUrl      String?
+  coverUrl     String?
+  description  String?
+  phone        String?
+  whatsapp     String?
+  email        String?
+  website      String?
+  hours        String?
+  address      String?
+  province     String
+  lat          Float
+  lng          Float
+  status       DealerStatus @default(PENDING)
+  verified     Boolean      @default(false)
+  // Dominio propio (sin "www.") que sirve la página oficial mientras el dealer tenga un plan con officialSite activo.
+  customDomain String?      @unique
+  createdAt    DateTime     @default(now())
 
   users         User[]
   vehicles      Vehicle[]
   subscriptions Subscription[]
   importJobs    ImportJob[]
+  socialAccount SocialAccount?
+  socialPosts   SocialPost[]
 
   @@index([status])
 }
@@ -242,7 +248,7 @@ model Vehicle {
   // Vista 360: `spinFrames` son las fotos del giro exterior en orden (el auto girando sobre su eje),
   // `spinVideo` el mismo giro como video en bucle (opcional, para el giro automático) e
   // `interiorPano`, una foto equirectangular 2:1 de la cabina.
-  spinFrames   String[]  @default([])
+  spinFrames   String[] @default([])
   spinVideo    String?
   interiorPano String?
 
@@ -263,6 +269,9 @@ model Vehicle {
   leads        LeadEvent[]
   savedBy      SavedVehicle[]
   requests     ContactRequest[]
+  socialAd     SocialAd?
+  socialPosts  SocialPost[]
+  socialVisits SocialVisit[]
 
   @@index([status, bodyType])
   @@index([status, priceDop])
@@ -347,6 +356,10 @@ model Plan {
   featuredSlots     Int
   durationDays      Int
   forDealers        Boolean        @default(false)
+  // El perfil del dealer se convierte en su página oficial: su logo y su propio dominio.
+  officialSite      Boolean        @default(false)
+  // Módulo de redes sociales: conectar Facebook e Instagram, editor de anuncios y métricas.
+  socialModule      Boolean        @default(false)
   active            Boolean        @default(true)
   subscriptions     Subscription[]
 }
@@ -454,11 +467,11 @@ model AuthToken {
 
 // Vehículos guardados de una cuenta (en el navegador viven en localStorage y se sincronizan al entrar).
 model SavedVehicle {
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  vehicleId String
-  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vehicleId      String
+  vehicle        Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  createdAt      DateTime  @default(now())
   // Rebaja de la que ya se avisó por correo.
   notifiedDropAt DateTime?
 
@@ -497,6 +510,126 @@ model ContactRequest {
   message       String?
   preferredDate DateTime?          @db.Date
   createdAt     DateTime           @default(now())
+
+  @@index([vehicleId, createdAt])
+}
+
+// Evidencia de una acción afirmativa; no se infiere aceptación para cuentas anteriores.
+model LegalAcceptance {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  kind      String
+  version   String
+  subjectId String?
+  details   Json?
+  createdAt DateTime @default(now())
+
+  @@index([userId, kind])
+  @@index([subjectId, kind])
+}
+
+// Canal público: disponible sin cuenta ni proveedor de correo configurado.
+model LegalRequest {
+  id         String    @id @default(cuid())
+  kind       String
+  name       String
+  email      String
+  reference  String?
+  message    String
+  version    String
+  createdAt  DateTime  @default(now())
+  reviewedAt DateTime?
+  reviewedBy String?
+  reviewNote String?
+
+  @@index([reviewedAt, createdAt])
+}
+
+enum SocialNetwork {
+  FACEBOOK
+  INSTAGRAM
+}
+
+enum SocialPostStatus {
+  PENDING
+  PUBLISHED
+  FAILED
+}
+
+// Conexión del dealer con Meta (src/lib/social/meta.ts): su página de Facebook y la cuenta profesional
+// de Instagram vinculada a ella. Los tokens se guardan cifrados (src/lib/social/crypto.ts).
+model SocialAccount {
+  dealerId         String    @id
+  dealer           Dealer    @relation(fields: [dealerId], references: [id], onDelete: Cascade)
+  pageId           String?
+  pageName         String?
+  pageToken        String?
+  igUserId         String?
+  igUsername       String?
+  // Páginas que devolvió la autorización, cifradas, mientras el dealer elige cuál conectar.
+  pendingPages     String?
+  connectedAt      DateTime?
+  // La última publicación falló porque el token venció o se quitó el permiso.
+  needsReconnect   Boolean   @default(false)
+  // Publicar solo cada vehículo la primera vez que pasa a publicado.
+  autoPublish      Boolean   @default(true)
+  publishFacebook  Boolean   @default(true)
+  publishInstagram Boolean   @default(true)
+  // Diseño y texto que reciben los vehículos sin anuncio propio (src/lib/social/design.ts).
+  defaultDesign    Json?
+  captionTemplate  String?
+  updatedAt        DateTime  @updatedAt
+}
+
+// Anuncio ajustado a mano para un vehículo en el editor.
+model SocialAd {
+  vehicleId String   @id
+  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  design    Json
+  caption   String
+  updatedAt DateTime @updatedAt
+}
+
+// Una publicación en una red. Las métricas son la última lectura de Meta (`metricsAt`).
+model SocialPost {
+  id          String           @id @default(cuid())
+  vehicleId   String
+  vehicle     Vehicle          @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  dealerId    String
+  dealer      Dealer           @relation(fields: [dealerId], references: [id], onDelete: Cascade)
+  network     SocialNetwork
+  status      SocialPostStatus @default(PENDING)
+  format      String
+  story       Boolean          @default(false)
+  imageUrl    String
+  caption     String
+  remoteId    String?
+  permalink   String?
+  error       String?
+  createdAt   DateTime         @default(now())
+  publishedAt DateTime?
+  reach       Int              @default(0)
+  views       Int              @default(0)
+  likes       Int              @default(0)
+  comments    Int              @default(0)
+  shares      Int              @default(0)
+  saves       Int              @default(0)
+  clicks      Int              @default(0)
+  metricsAt   DateTime?
+
+  @@index([dealerId, createdAt])
+  @@index([vehicleId, createdAt])
+  @@index([status, metricsAt])
+}
+
+// Visita a la ficha que llegó desde un enlace publicado en redes (utm_source=facebook|instagram).
+model SocialVisit {
+  id        String        @id @default(cuid())
+  vehicleId String
+  vehicle   Vehicle       @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  network   SocialNetwork
+  createdAt DateTime      @default(now())
 
   @@index([vehicleId, createdAt])
 }

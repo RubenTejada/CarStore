@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { inventoryChanged } from "@/lib/inventory-cache";
@@ -18,6 +19,9 @@ import { DESCRIPTION_SYSTEM, vehicleFacts } from "@/lib/vehicle-description";
 import { BodyType, Condition, Currency, Drivetrain, Fuel, Transmission, VehicleStatus } from "@/generated/prisma/enums";
 import { SPIN_MAX_FRAMES, SPIN_MIN_FRAMES } from "@/lib/labels";
 import type { FormState } from "./auth";
+import { legalFields } from "@/lib/legal-validation";
+import { LEGAL_VERSION } from "@/lib/legal";
+import { autoPublishVehicle } from "@/lib/social/service";
 
 // Fotos subidas, las de Unsplash del seed y las vistas 360 de demostración (public/demo-360).
 const photoUrl = z
@@ -43,6 +47,7 @@ const optionalInt = (min: number, max: number) =>
     .pipe(z.number().int().min(min).max(max).nullable());
 
 const vehicleSchema = z.object({
+  ...legalFields,
   modelId: z.string().min(1, "Selecciona marca y modelo"),
   bodyType: z.enum(BodyType),
   year: z.coerce.number().int().min(1950, "Año inválido").max(new Date().getFullYear() + 1, "Año inválido"),
@@ -177,23 +182,28 @@ export async function saveVehicle(id: string | null, _: FormState, form: FormDat
     ...(existing?.spinFrames.join() !== d.spinFrames.join() && { spinVideo: null }),
     interiorPano: d.interiorPano,
     status: activate ? VehicleStatus.ACTIVE : VehicleStatus.DRAFT,
+    // Las alertas de búsquedas guardadas avisan de los vehículos publicados después de su última revisión.
+    ...(activate && !wasActive && { publishedAt: new Date() }),
     featuredUntil,
     ...(existing && nextPriceDrop(existing, d)),
     // Solo lo envía el formulario de un anuncio importado; al editar se conserva el que ya tenía.
     ...(d.sourceUrl && { sourceUrl: d.sourceUrl }),
   };
 
-  await db.$transaction(async (tx) => {
+  const saved = await db.$transaction(async (tx) => {
     const vehicle = existing
       ? await tx.vehicle.update({ where: { id: existing.id }, data })
       : await tx.vehicle.create({ data: { ...data, ownerId: user.id, dealerId: user.dealerId } });
+    await tx.legalAcceptance.create({ data: { userId: user.id, kind: "LISTING", version: LEGAL_VERSION, subjectId: vehicle.id } });
     await tx.vehiclePhoto.deleteMany({ where: { vehicleId: vehicle.id } });
     await tx.vehiclePhoto.createMany({ data: d.photos.map((url, position) => ({ vehicleId: vehicle.id, url, position })) });
     await tx.vehicleFeature.deleteMany({ where: { vehicleId: vehicle.id } });
     await tx.vehicleFeature.createMany({ data: features.map((f) => ({ vehicleId: vehicle.id, featureId: f.id })) });
     if (existing && (existing.price !== d.price || existing.currency !== d.currency))
       await tx.priceChange.create({ data: { vehicleId: vehicle.id, oldPrice: existing.price, oldCurrency: existing.currency, price: d.price, currency: d.currency } });
+    return vehicle;
   });
+  if (activate && !wasActive) after(() => autoPublishVehicle(saved.id));
 
   inventoryChanged();
   revalidatePath("/", "layout");
@@ -208,15 +218,19 @@ export async function setVehicleStatus(id: string, status: VehicleStatus): Promi
   if (!Object.values(VehicleStatus).includes(status)) return { error: "Estado inválido." };
 
   if (status === "ACTIVE" && user.role !== "ADMIN") {
+    if (!(await db.legalAcceptance.findFirst({ where: { kind: "LISTING", subjectId: id, version: LEGAL_VERSION } })))
+      return { error: "Abre Editar, revisa el anuncio y acepta las condiciones de publicación antes de activarlo." };
     const photos = await db.vehiclePhoto.count({ where: { vehicleId: id } });
     if (!photos) return { error: "Agrega al menos una foto para publicar." };
     const error = evaluatePublish(await getQuota(user), { activate: true, featured: false, wasActive: vehicle.status === "ACTIVE", wasFeatured: false });
     if (error) return { error };
   }
+  const activated = status === "ACTIVE" && vehicle.status !== "ACTIVE";
   await db.vehicle.update({
     where: { id },
-    data: { status, ...(status !== "ACTIVE" && { featuredUntil: null }) },
+    data: { status, ...(status !== "ACTIVE" && { featuredUntil: null }), ...(activated && { publishedAt: new Date() }) },
   });
+  if (activated) after(() => autoPublishVehicle(id));
   inventoryChanged();
   revalidatePath("/", "layout");
   return { ok: "Estado actualizado." };

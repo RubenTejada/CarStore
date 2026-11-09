@@ -12,6 +12,7 @@ import { priceDrop } from "@/lib/price-drop";
 import { buildWhere, parseSearchParams } from "@/lib/search-params";
 import { siteUrl } from "@/lib/seo";
 import { vehicleTitle, vehicleUrl } from "@/lib/urls";
+import { legalOperatorReady } from "@/lib/legal";
 
 /** Vehículos por búsqueda en el correo; el resto, con el enlace a la búsqueda. */
 const PER_SEARCH = 5;
@@ -45,8 +46,9 @@ function toAlertVehicle(v: Row, drop?: number): AlertVehicle {
 export type AlertsSummary = { users: number; sent: number; failed: number };
 
 export async function sendAlerts(now = new Date()): Promise<AlertsSummary> {
+  if (!legalOperatorReady()) throw new Error("Completa LEGAL_OPERATOR_NAME, LEGAL_OPERATOR_RNC, LEGAL_OPERATOR_ADDRESS y LEGAL_CONTACT_EMAIL antes de enviar alertas comerciales.");
   const users = await db.user.findMany({
-    where: { active: true, alertsEnabled: true, emailVerifiedAt: { not: null }, OR: [{ savedSearches: { some: {} } }, { savedVehicles: { some: {} } }] },
+    where: { active: true, alertsEnabled: true, emailVerifiedAt: { not: null }, legalAcceptances: { some: { kind: "ALERTS_ENABLED" } }, OR: [{ savedSearches: { some: {} } }, { savedVehicles: { some: {} } }] },
     select: {
       id: true,
       name: true,

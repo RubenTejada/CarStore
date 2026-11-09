@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Eye, MessageCircle, Pencil, Star } from "lucide-react";
+import { Eye, Megaphone, MessageCircle, Pencil, Star } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { accountScope } from "@/lib/listing-rules";
@@ -13,6 +13,7 @@ import { VehicleRowActions } from "@/components/panel/vehicle-row-actions";
 import { SortSelect } from "@/components/browse/sort-select";
 import { button, card } from "@/components/ui/styles";
 import { cn } from "@/lib/cn";
+import { socialEnabled } from "@/lib/social/service";
 
 const STATUS_STYLE = {
   ACTIVE: "bg-ok/15 text-ok",
@@ -26,11 +27,14 @@ export default async function MyVehicles({ searchParams }: PageProps<"/panel/veh
   const sp = await searchParams;
   const { ok } = sp;
   const { orden } = parseSearchParams(sp);
-  const vehicles = await db.vehicle.findMany({
-    where: accountScope(user),
-    orderBy: buildOrderBy(orden),
-    include: { model: { include: { brand: true } }, photos: { take: 1, orderBy: { position: "asc" } }, _count: { select: { leads: true } } },
-  });
+  const [vehicles, social] = await Promise.all([
+    db.vehicle.findMany({
+      where: accountScope(user),
+      orderBy: buildOrderBy(orden),
+      include: { model: { include: { brand: true } }, photos: { take: 1, orderBy: { position: "asc" } }, _count: { select: { leads: true } } },
+    }),
+    socialEnabled(user.dealerId),
+  ]);
 
   return (
     <>
@@ -102,6 +106,12 @@ export default async function MyVehicles({ searchParams }: PageProps<"/panel/veh
                     {v.status === "ACTIVE" && (
                       <Link href={vehicleUrl(v)} className={button("ghost", "sm")}>
                         Ver
+                      </Link>
+                    )}
+                    {social && (
+                      <Link href={`/panel/vehiculos/${v.id}/redes`} className={button("ghost", "sm")}>
+                        <Megaphone className="size-3.5" aria-hidden />
+                        Redes
                       </Link>
                     )}
                     <VehicleRowActions

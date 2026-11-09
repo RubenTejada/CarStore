@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Search, SlidersHorizontal } from "lucide-react";
 import { KIND_LABEL, fromParams, normalize, prepareIndex, suggest, toHref, type PreparedIndex, type SearchIndex, type Suggestion } from "@/lib/search-suggest";
 import { cn } from "@/lib/cn";
@@ -136,6 +137,9 @@ export function SearchBox({ params = {}, defaultValue = "", tone = "light", plac
         {submitLabel}
       </button>
       {children && <div className="order-2 sm:order-none sm:col-span-2">{children}</div>}
+      <p className={cn("order-4 text-xs leading-relaxed sm:col-span-2", tone === "dark" ? "text-white/65" : "text-muted")}>
+        La búsqueda libre puede interpretarse con IA. No incluyas datos personales ni sensibles. <Link href="/legal/privacidad" className="underline">Privacidad</Link>
+      </p>
       <p className="sr-only" aria-live="polite">
         {open && text ? (items.length === 1 ? "1 sugerencia" : `${items.length} sugerencias`) : ""}
       </p>

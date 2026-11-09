@@ -20,6 +20,7 @@ import { PhotoUploader } from "./photo-uploader";
 import { View360Uploader } from "./view-360-uploader";
 import { FormMessage } from "./form-message";
 import { useFormAction } from "./use-form-action";
+import { LegalAcceptance, LegalLink } from "@/components/legal/acceptance";
 import { cn } from "@/lib/cn";
 
 export type VehicleFormValues = {
@@ -287,6 +288,8 @@ export function VehicleForm({ action, values, brands, features, provinces, featu
         <LocationPicker defaultLat={values.lat} defaultLng={values.lng} />
       </Section>
 
+      <LegalAcceptance>Tengo facultad para ofrecer este vehículo y derechos para publicar sus textos, fotos y videos. He revisado la exactitud de los datos, el precio y los cargos aplicables. Acepto los <LegalLink doc="terminos">Términos de uso</LegalLink> y la <LegalLink doc="publicaciones">Política de publicaciones</LegalLink>. Autorizo mostrar los datos de contacto, ubicación y placa o VIN que facilite en el anuncio público, según la <LegalLink doc="privacidad">Política de privacidad</LegalLink>.</LegalAcceptance>
+      <p className="text-sm text-muted">Usa un punto de encuentro si no quieres publicar tu domicilio. No incluyas documentos de identidad ni datos de terceros en las imágenes. Placa y VIN son opcionales.</p>
       <div className={cn(card, "sticky bottom-4 z-10 flex flex-wrap items-center justify-between gap-4 p-4 shadow-xl")}>
         <label className="flex items-center gap-3 text-sm">
           <input type="checkbox" name="featured" defaultChecked={values.featured} className="size-5 accent-[var(--accent)]" />
@@ -348,7 +351,7 @@ function DescriptionField({ defaultValue, ai }: { defaultValue: string; ai: bool
       />
       {ai && (
         <p className={cn("mt-1 text-xs", error ? "text-accent" : "text-muted")} role={error ? "alert" : undefined}>
-          {error || "Usa los datos y características que marcaste. Revísala antes de publicar: puedes editarla."}
+          {error || "Al pulsar Redactar con IA se enviarán los datos del vehículo y tu descripción a Claude (Anthropic o Microsoft Foundry). No incluyas datos sensibles. Revisa el texto antes de publicar."}
         </p>
       )}
     </div>

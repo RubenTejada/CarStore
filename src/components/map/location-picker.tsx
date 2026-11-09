@@ -7,6 +7,7 @@ import { input, label, button } from "@/components/ui/styles";
 import { MAPS_KEY, MAP_ID } from "./map-view";
 import { MarkerPin, PIN_COLOR } from "./marker-pin";
 import { SchematicMap } from "./schematic-map";
+import { MapConsent } from "./map-consent";
 
 /** Selector de ubicación: clic en el mapa (o arrastrar el marcador) para fijar lat/lng. */
 export function LocationPicker({ defaultLat, defaultLng }: { defaultLat: number; defaultLng: number }) {
@@ -24,6 +25,7 @@ export function LocationPicker({ defaultLat, defaultLng }: { defaultLat: number;
   return (
     <div>
       {MAPS_KEY ? (
+        <MapConsent fallback={<SchematicMap points={[]} picked={pos} onPick={setPos} className="aspect-[1000/718] border border-line" />}>
         <div className="h-80 overflow-hidden rounded-xl border border-line">
           <APIProvider apiKey={MAPS_KEY} language="es" region="DO">
             <Map
@@ -47,6 +49,7 @@ export function LocationPicker({ defaultLat, defaultLng }: { defaultLat: number;
             </Map>
           </APIProvider>
         </div>
+        </MapConsent>
       ) : (
         <SchematicMap points={[]} picked={pos} onPick={setPos} className="aspect-[1000/718] border border-line" />
       )}
