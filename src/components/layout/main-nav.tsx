@@ -13,7 +13,7 @@ function isActive(href: string, pathname: string, params: URLSearchParams | null
   if (pathname !== path && !pathname.startsWith(path + "/")) return false;
   const wanted = new URLSearchParams(query);
   if (wanted.size) return [...wanted].every(([k, v]) => params?.get(k) === v);
-  return true;
+  return path === "/vehiculos" ? params?.get("condicion") !== "nuevo" : true;
 }
 
 type Props = { items: MainNavItem[]; variant: "bar" | "menu"; dark?: boolean };

@@ -9,13 +9,13 @@ import { LEGAL_VERSION } from "@/lib/legal";
 export default async function PublicLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
   return (
-    <div className="public-portal flex flex-1 flex-col">
+    <>
       <SiteHeader />
       <main className="flex-1">{children}</main>
       <SiteFooter />
       <CompareTray />
       <AutoSubmit />
       {user?.legalVersion === LEGAL_VERSION && <SavedSync userId={user.id} />}
-    </div>
+    </>
   );
 }

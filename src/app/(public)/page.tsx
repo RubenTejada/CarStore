@@ -49,14 +49,14 @@ export default async function HomePage() {
         ],
       }} />
       <section className="relative overflow-hidden bg-night">
-        <div className="relative mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:py-10">
-          <h1 className="hero-display text-3xl text-white sm:text-4xl">
-            Encuentra tu próximo vehículo
+        <div className="relative mx-auto max-w-7xl px-4 pt-12 pb-16 sm:px-6 lg:pt-16">
+          <h1 className="display text-3xl text-white sm:text-4xl">
+            ¿Qué vas a <span className="text-[#f5b700]">manejar</span>?
           </h1>
-          <p className="mt-3 max-w-2xl text-base text-white/75">
-            {totals.toLocaleString("es-DO")} vehículos de dealers y particulares en República Dominicana.
+          <p className="mt-4 max-w-xl text-lg text-white/70">
+            {totals} vehículos de {dealers.length} dealers y particulares esperan por ti en toda la República Dominicana. Elige el tipo, la marca y el modelo.
           </p>
-          <div className="mt-6">
+          <div className="mt-8">
             <VehicleFinder brands={brands} />
           </div>
         </div>
@@ -64,20 +64,20 @@ export default async function HomePage() {
 
       {featured.length > 0 && (
         <SpinPlayback>
-        <section className="mx-auto max-w-7xl px-4 pt-9 sm:px-6">
+        <section className="mx-auto max-w-7xl px-4 pt-16 sm:px-6">
           <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
             <div>
-              <h2 className="display text-2xl">Vehículos destacados</h2>
-              <p className="mt-1 text-sm text-muted">Anuncios promocionados por sus vendedores.</p>
+              <h2 className="display text-3xl">Destacados</h2>
+              <p className="mt-1 text-muted">Vehículos promocionados por dealers y vendedores con plan.</p>
             </div>
             <span className="flex shrink-0 items-center gap-5">
               {featured.some((v) => v.spinFrames.length) && <SectionPlayToggle />}
-              <Link href="/vehiculos" className="text-sm font-semibold text-brand hover:underline">
-                Ver todos los vehículos
+              <Link href="/planes" className="text-sm font-semibold text-brand hover:underline">
+                Destaca tu vehículo
               </Link>
             </span>
           </div>
-          <ul aria-label="Vehículos destacados" className="mt-5 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4">
+          <ul className="scrollbar-none -mx-4 mt-6 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 sm:-mx-6 sm:px-6">
             {featured.map((v, i) => (
               <li key={v.id} className="w-[78%] shrink-0 snap-start sm:w-[45%] lg:w-[23.5%]">
                 <VehicleCard v={v} priority={i < 2} spin className="h-full" />
@@ -88,12 +88,12 @@ export default async function HomePage() {
         </SpinPlayback>
       )}
 
-      <RecentlyViewed className="pt-12" />
+      <RecentlyViewed className="pt-16" />
 
       <section className="mx-auto max-w-7xl px-4 pt-20 sm:px-6">
-        <h2 className="display text-2xl">Explora por marca</h2>
+        <h2 className="display text-3xl">Marcas</h2>
         <ul className={cn("mt-6", brandGrid)}>
-          {brands.filter((b) => (brandCounts.get(b.slug) ?? 0) > 0).sort((a, b) => (brandCounts.get(b.slug) ?? 0) - (brandCounts.get(a.slug) ?? 0)).slice(0, 8).map((b) => (
+          {brands.map((b) => (
             <li key={b.slug} className={brandCell}>
               <Link href={`/vehiculos?marca=${b.slug}`} className={brandTile}>
                 <BrandTileBody brand={b} count={brandCounts.get(b.slug) ?? 0} />
@@ -101,7 +101,6 @@ export default async function HomePage() {
             </li>
           ))}
         </ul>
-        <Link href="/vehiculos" className="mt-5 inline-block text-sm font-semibold text-brand hover:underline">Ver todas las marcas con vehículos</Link>
       </section>
 
       <section className="mx-auto max-w-7xl px-4 pt-20 sm:px-6">

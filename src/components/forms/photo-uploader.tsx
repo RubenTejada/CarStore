@@ -89,7 +89,6 @@ export function PhotoUploader({ name, defaultValue = [] }: { name: string; defau
       <p className={cn("mt-2 text-sm", error ? "font-medium text-accent" : "text-muted")} role={error ? "alert" : undefined}>
         {error ?? "JPG, PNG o WebP hasta 10 MB. La primera foto es la portada."}
       </p>
-      <p className="mt-2 max-w-prose text-sm text-muted">Usa fotos reales del mismo vehículo: exterior, interior y detalles. Elige una vista completa y bien iluminada como portada.</p>
     </div>
   );
 }

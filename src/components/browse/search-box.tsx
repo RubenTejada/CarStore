@@ -6,7 +6,6 @@ import Link from "next/link";
 import { Search, SlidersHorizontal } from "lucide-react";
 import { KIND_LABEL, fromParams, normalize, prepareIndex, suggest, toHref, type PreparedIndex, type SearchIndex, type Suggestion } from "@/lib/search-suggest";
 import { cn } from "@/lib/cn";
-import { button } from "@/components/ui/styles";
 import { BodySilhouette } from "./body-silhouette";
 import { BrandLogo } from "./brand-logo";
 
@@ -34,15 +33,13 @@ type Props = {
   tone?: "dark" | "light";
   placeholder?: string;
   className?: string;
-  children?: React.ReactNode;
-  submitLabel?: string;
 };
 
 /**
  * Buscador con autocompletado: entiende marca, modelo, versión, tipo, condición, combustible,
  * transmisión y año, y lleva a /vehiculos con esos filtros. Sin JS envía `q` como búsqueda libre.
  */
-export function SearchBox({ params = {}, defaultValue = "", tone = "light", placeholder = "Marca o modelo, por ejemplo: Corolla 2020", className, children, submitLabel = "Buscar" }: Props) {
+export function SearchBox({ params = {}, defaultValue = "", tone = "light", placeholder = "Marca, modelo, versión o tipo: Corolla 2020", className }: Props) {
   const router = useRouter();
   const listId = useId();
   const [query, setQuery] = useState(defaultValue);
@@ -88,14 +85,14 @@ export function SearchBox({ params = {}, defaultValue = "", tone = "light", plac
       role="search"
       action="/vehiculos"
       method="get"
-      className={cn("relative z-30 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]", className)}
+      className={cn("relative z-30", className)}
       onSubmit={(e) => {
         e.preventDefault();
         go(current?.href ?? freeText());
       }}
     >
       {Object.entries(params).map(([k, v]) => (k === "q" || k === "pagina" ? null : <input key={k} type="hidden" name={k} value={v} />))}
-      <div className="relative min-w-0 flex-1">
+      <div className="relative">
         <Search
           className={cn("pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2", tone === "dark" ? "text-white/60" : "text-muted")}
           aria-hidden
@@ -111,7 +108,7 @@ export function SearchBox({ params = {}, defaultValue = "", tone = "light", plac
           role="combobox"
           aria-autocomplete="list"
           aria-expanded={open && items.length > 0}
-          aria-controls={open && items.length > 0 ? listId : undefined}
+          aria-controls={listId}
           aria-activedescendant={current ? `${listId}-${active}` : undefined}
           onPointerEnter={ensureIndex}
           onFocus={() => {
@@ -133,11 +130,7 @@ export function SearchBox({ params = {}, defaultValue = "", tone = "light", plac
           )}
         />
       </div>
-      <button type="submit" className={cn(button("primary", "lg"), "order-3 shrink-0 sm:order-none")}>
-        {submitLabel}
-      </button>
-      {children && <div className="order-2 sm:order-none sm:col-span-2">{children}</div>}
-      <p className={cn("order-4 text-xs leading-relaxed sm:col-span-2", tone === "dark" ? "text-white/65" : "text-muted")}>
+      <p className={cn("mt-2 text-xs leading-relaxed", tone === "dark" ? "text-white/65" : "text-muted")}>
         La búsqueda libre puede interpretarse con IA. No incluyas datos personales ni sensibles. <Link href="/legal/privacidad" className="underline">Privacidad</Link>
       </p>
       <p className="sr-only" aria-live="polite">
@@ -145,7 +138,7 @@ export function SearchBox({ params = {}, defaultValue = "", tone = "light", plac
       </p>
 
       {open && items.length > 0 && (
-        <div className={cn("absolute inset-x-0 top-13 mt-2 overflow-hidden rounded-xl border border-line bg-surface text-ink shadow-2xl", !children && "sm:right-32")}>
+        <div className="absolute inset-x-0 top-13 mt-2 overflow-hidden rounded-xl border border-line bg-surface text-ink shadow-2xl">
           {!text && <p className="px-4 pt-3 pb-1 text-xs font-semibold tracking-wide text-muted uppercase">Con más vehículos</p>}
           <ul id={listId} role="listbox" aria-label="Sugerencias" className="max-h-[min(28rem,65vh)] overflow-y-auto p-1.5">
             {items.map((s, i) => (

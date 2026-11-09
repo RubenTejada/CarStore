@@ -19,7 +19,7 @@ export function FavoriteToggle({ id, title, variant = "card", className }: { id:
       onClick={() => toggle(id)}
       className={cn(
         variant === "card"
-          ? "grid size-11 place-items-center rounded-md bg-surface/90 text-ink shadow-sm backdrop-blur transition-colors hover:bg-surface"
+          ? "grid size-8 place-items-center rounded-md bg-surface/90 text-ink shadow-sm backdrop-blur transition-colors hover:bg-surface"
           : cn(button("outline", "lg"), active && "border-accent text-accent"),
         className,
       )}

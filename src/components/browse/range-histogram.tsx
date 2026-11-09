@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { Histogram } from "@/lib/histogram";
 import { cn } from "@/lib/cn";
-import { input, label } from "@/components/ui/styles";
+import { label } from "@/components/ui/styles";
 
 /**
  * Filtro de rango con histograma: dos manijas sobre las barras, que muestran
@@ -25,7 +25,6 @@ export function RangeHistogram({
   discrete = false,
   format,
   onCommit,
-  inputScale = 1,
 }: {
   legend: string;
   names: [string, string];
@@ -34,8 +33,6 @@ export function RangeHistogram({
   discrete?: boolean;
   format: (n: number) => string;
   onCommit: () => void;
-  /** Los filtros viajan en RD$; los campos pueden mostrarse en US$. */
-  inputScale?: number;
 }) {
   const [min, setMin] = useState(value[0] ?? "");
   const [max, setMax] = useState(value[1] ?? "");
@@ -46,38 +43,6 @@ export function RangeHistogram({
       <input type="hidden" name={maxName} value={max} />
     </>
   );
-  const commit = () => {
-    if (min !== (value[0] ?? "") || max !== (value[1] ?? "")) onCommit();
-  };
-  const minNumber = min ? Math.round(Number(min) / inputScale) : "";
-  const maxNumber = max ? Math.round(Number(max) / inputScale) : "";
-  const fields = (
-    <div className="mt-3 grid grid-cols-2 gap-2">
-      {([
-        ["Desde", minNumber, setMin],
-        ["Hasta", maxNumber, setMax],
-      ] as const).map(([text, number, setValue]) => (
-        <label key={text} className="text-xs text-muted">
-          {text}
-          <input
-            type="number"
-            inputMode="numeric"
-            aria-label={`${legend}: ${text.toLowerCase()}`}
-            value={number}
-            min={text === "Hasta" && minNumber !== "" ? minNumber : 0}
-            max={text === "Desde" && maxNumber !== "" ? maxNumber : undefined}
-            step={1}
-            placeholder="Sin límite"
-            onChange={(e) => setValue(e.target.value === "" ? "" : String(Math.round(Number(e.target.value) * inputScale)))}
-            onBlur={(e) => {
-              if (e.currentTarget.form?.reportValidity()) commit();
-            }}
-            className={cn(input, "mt-1 px-2 text-sm tabular-nums")}
-          />
-        </label>
-      ))}
-    </div>
-  );
 
   if (!histogram) {
     return (
@@ -85,7 +50,6 @@ export function RangeHistogram({
         <legend className={label}>{legend}</legend>
         {hidden}
         <p className="text-sm text-muted">Sin vehículos para este rango.</p>
-        {fields}
       </fieldset>
     );
   }
@@ -102,8 +66,11 @@ export function RangeHistogram({
   const b = Math.max(hi, a + 1);
   const peak = Math.max(...counts, 1);
 
-  const minText = format(min ? Number(min) : at(a));
-  const maxText = format(max ? Number(max) : at(b) - adjust) + (!max && b === n && !discrete ? "+" : "");
+  const minText = format(at(a));
+  const maxText = format(at(b) - adjust) + (b === n && !discrete ? "+" : "");
+  const commit = () => {
+    if (min !== (value[0] ?? "") || max !== (value[1] ?? "")) onCommit();
+  };
   /** Qué representa la barra `i`: su tramo (o año) y cuántos vehículos hay. */
   const describe = (i: number) => {
     const from = format(at(i));
@@ -128,14 +95,14 @@ export function RangeHistogram({
     <fieldset>
       <legend className={label}>{legend}</legend>
       {hidden}
-      <p className="mb-3 text-sm font-semibold tabular-nums" aria-hidden>
+      <p className="mb-3 text-[15px] font-bold tabular-nums" aria-hidden>
         {minText} – {maxText}
       </p>
 
       {/* Las barras van con el mismo margen que el radio de la manija, para que cada borde coincida con su posición. */}
       {/* Cada columna ocupa todo el alto para que las barras bajas también respondan al hover. */}
       <div className="px-2.5" aria-hidden onPointerLeave={() => setHover(null)}>
-        <div className="relative flex h-10 items-end gap-px">
+        <div className="relative flex h-16 items-end gap-px">
           {counts.map((c, i) => (
             <div key={i} className="flex h-full flex-1 items-end" onPointerEnter={() => setHover(i)}>
               <div
@@ -188,7 +155,6 @@ export function RangeHistogram({
           }}
         />
       </div>
-      {fields}
     </fieldset>
   );
 }

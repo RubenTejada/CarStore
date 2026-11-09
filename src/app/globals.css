@@ -77,27 +77,13 @@ body {
   font-family: var(--font-sans);
 }
 
-/* Archivo para títulos funcionales; Saira se reserva para la portada. */
+/* Titulares: Saira itálica, la misma del logo y del hero de la portada. */
 .display {
-  font-family: var(--font-sans);
-  font-style: normal;
-  font-weight: 700;
-  letter-spacing: -0.025em;
-  line-height: 1.2;
-}
-
-.hero-display {
   font-family: var(--font-logo);
   font-style: italic;
   font-weight: 700;
   letter-spacing: -0.025em;
   line-height: 1.1;
-}
-
-@media (max-width: 1023px) {
-  .public-portal:has(.vehicle-contact-bar) .compare-tray {
-    bottom: calc(5.5rem + env(safe-area-inset-bottom));
-  }
 }
 
 .wide {
