@@ -38,6 +38,7 @@ export default async function AdminDealers({ searchParams }: PageProps<"/admin/d
               <p className="flex items-center gap-1.5 font-bold">
                 {d.name}
                 {d.verified && <BadgeCheck className="size-4 text-brand" aria-label="Verificado" />}
+                {d.demo && <span className="rounded-full bg-surface-2 px-2 py-0.5 text-xs font-semibold text-muted" title="Su inventario no se lista en el portal">Demo</span>}
               </p>
               <p className="text-sm text-muted">
                 {d.province}, {d._count.vehicles} vehículos, {d._count.users} usuarios{d.users[0] && `, ${d.users[0].email}`}

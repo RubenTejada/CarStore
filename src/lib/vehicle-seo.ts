@@ -8,7 +8,7 @@ import { vehicleTitle, vehicleUrl } from "@/lib/urls";
 type SeoVehicle = Pick<Vehicle, "id" | "year" | "trim" | "condition" | "price" | "currency" | "mileageKm" | "transmission" | "fuel" | "bodyType" | "extColor" | "description" | "province" | "status"> & {
   model: { name: string; brand: { name: string } };
   photos: { url: string }[];
-  dealer: { name: string; slug: string } | null;
+  dealer: { name: string; slug: string; demo?: boolean } | null;
   owner: { name: string };
 };
 
@@ -33,7 +33,8 @@ export function vehicleMetadata(v: SeoVehicle | null): Metadata {
       description: description.length > 160 ? `${description.slice(0, 157).trimEnd()}…` : description,
       images: v.photos.slice(0, 4).map((photo) => photo.url),
     }),
-    robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 } },
+    // Los de un dealer de demostración conservan la vista previa al compartirlos, pero no se indexan.
+    robots: v.dealer?.demo ? NO_INDEX : { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 } },
   };
 }
 

@@ -2,7 +2,7 @@ import "server-only";
 import { db } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma/client";
 import type { BodyType } from "@/generated/prisma/enums";
-import { buildOrderBy, buildWhere, type SearchFilters } from "@/lib/search-params";
+import { LISTED, buildOrderBy, buildWhere, type SearchFilters } from "@/lib/search-params";
 import { sweepExpiredSubscriptions } from "@/lib/listing-rules";
 import { getUsdRate } from "@/lib/exchange-rate";
 import { priceHistogram, yearHistogram } from "@/lib/histogram";
@@ -102,7 +102,7 @@ export async function getFacets(filters: SearchFilters) {
 
 export async function getFeaturedVehicles(limit = 8) {
   return db.vehicle.findMany({
-    where: { status: "ACTIVE", featuredUntil: { gt: new Date() } },
+    where: { AND: [LISTED, { featuredUntil: { gt: new Date() } }] },
     select: vehicleCardSelect,
     orderBy: { featuredUntil: "desc" },
     take: limit,

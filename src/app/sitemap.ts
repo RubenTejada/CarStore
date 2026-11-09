@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { db } from "@/lib/db";
+import { LISTED } from "@/lib/search-params";
 import { siteUrl } from "@/lib/seo";
 import { vehicleUrl } from "@/lib/urls";
 import { LEGAL_DOCUMENTS } from "@/lib/legal";
@@ -14,7 +15,7 @@ const xmlUrl = (path: string) => siteUrl(path).replace(/&/g, "&amp;").replace(/<
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [vehicles, dealers] = await Promise.all([
     db.vehicle.findMany({
-      where: { status: "ACTIVE" },
+      where: LISTED,
       select: {
         id: true, year: true,
         model: { select: { name: true, brand: { select: { name: true } } } },
@@ -22,7 +23,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       },
       orderBy: { id: "asc" },
     }),
-    db.dealer.findMany({ where: { status: "APPROVED" }, select: { slug: true }, orderBy: { slug: "asc" } }),
+    db.dealer.findMany({ where: { status: "APPROVED", demo: false }, select: { slug: true }, orderBy: { slug: "asc" } }),
   ]);
   return [
     ...["/", "/vehiculos", "/dealers", "/financiamiento", "/compra-segura", "/planes", "/legal", "/legal/contacto", ...Object.keys(LEGAL_DOCUMENTS).map((slug) => `/legal/${slug}`)].map((path) => ({ url: xmlUrl(path) })),

@@ -158,6 +158,9 @@ model Dealer {
   lng          Float
   status       DealerStatus @default(PENDING)
   verified     Boolean      @default(false)
+  // Dealer de demostración: su inventario no se lista en el portal (búsquedas, portada, mapa, sitemap)
+  // ni se indexa; sus fichas solo se abren con el enlace directo (p. ej. desde sus redes).
+  demo         Boolean      @default(false)
   // Dominio propio (sin "www.") que sirve la página oficial mientras el dealer tenga un plan con officialSite activo.
   customDomain String?      @unique
   createdAt    DateTime     @default(now())

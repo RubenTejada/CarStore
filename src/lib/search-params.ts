@@ -105,6 +105,12 @@ export function toQueryString(filters: SearchFilters, overrides: Partial<Record<
 
 type Dimension = "tipo" | "marca" | "version" | "precio" | "anio";
 
+/** Vehículos fuera de los dealers de demostración (Dealer.demo); los de particulares no tienen dealer. */
+export const NOT_DEMO: Prisma.VehicleWhereInput = { OR: [{ dealerId: null }, { dealer: { is: { demo: false } } }] };
+
+/** Vehículos que se listan en el portal: publicados y fuera de los dealers de demostración. */
+export const LISTED: Prisma.VehicleWhereInput = { AND: [{ status: "ACTIVE" }, NOT_DEMO] };
+
 /** Construye el `where` de Prisma. `omit` excluye una dimensión (para conteos por faceta). */
 export function buildWhere(f: SearchFilters, omit?: Dimension): Prisma.VehicleWhereInput {
   const and: Prisma.VehicleWhereInput[] = [{ status: "ACTIVE" }];
@@ -129,7 +135,8 @@ export function buildWhere(f: SearchFilters, omit?: Dimension): Prisma.VehicleWh
   if (f.traccion) and.push({ drivetrain: f.traccion });
   if (f.color) and.push({ extColor: { equals: f.color, mode: "insensitive" } });
   if (f.provincia) and.push({ province: f.provincia });
-  if (f.dealer) and.push({ dealer: { slug: f.dealer } });
+  // La página de un dealer muestra todo su inventario, también el de un dealer de demostración.
+  and.push(f.dealer ? { dealer: { slug: f.dealer } } : NOT_DEMO);
   for (const feature of f.car ?? []) and.push({ features: { some: { feature: { slug: feature } } } });
   if (f.q) {
     const words = f.q.split(/\s+/).filter(Boolean).slice(0, 5);

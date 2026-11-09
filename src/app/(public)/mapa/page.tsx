@@ -3,7 +3,7 @@ import { NO_INDEX, pageMetadata } from "@/lib/seo";
 import { Building2, Car, Layers } from "lucide-react";
 import { db } from "@/lib/db";
 import { searchMapPoints } from "@/lib/search";
-import { parseSearchParams } from "@/lib/search-params";
+import { LISTED, parseSearchParams } from "@/lib/search-params";
 import { BODY_TYPES, formatKm, formatPrice } from "@/lib/labels";
 import { vehicleTitle, vehicleUrl } from "@/lib/urls";
 import { MapView } from "@/components/map/map-view";
@@ -27,8 +27,8 @@ export default async function MapPage({ searchParams }: PageProps<"/mapa">) {
 
   const [vehicles, dealers, brands] = await Promise.all([
     show === "dealers" ? [] : searchMapPoints(f, 800),
-    show === "vehiculos" ? [] : db.dealer.findMany({ where: { status: "APPROVED" }, include: { _count: { select: { vehicles: { where: { status: "ACTIVE" } } } } } }),
-    db.brand.findMany({ where: { models: { some: { vehicles: { some: { status: "ACTIVE" } } } } }, orderBy: { name: "asc" }, select: { slug: true, name: true } }),
+    show === "vehiculos" ? [] : db.dealer.findMany({ where: { status: "APPROVED", demo: false }, include: { _count: { select: { vehicles: { where: { status: "ACTIVE" } } } } } }),
+    db.brand.findMany({ where: { models: { some: { vehicles: { some: LISTED } } } }, orderBy: { name: "asc" }, select: { slug: true, name: true } }),
   ]);
 
   const points: MapPoint[] = [

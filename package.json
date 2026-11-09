@@ -14,7 +14,8 @@
     "db:reset": "prisma migrate reset --force",
     "rates:update": "tsx scripts/update-rates.ts",
     "alerts:send": "tsx scripts/send-alerts.ts",
-    "social:metrics": "tsx scripts/social-metrics.ts"
+    "social:metrics": "tsx scripts/social-metrics.ts",
+    "demo:dealer": "tsx scripts/create-demo-dealer.ts"
   },
   "dependencies": {
     "@anthropic-ai/foundry-sdk": "^0.5.4",
