@@ -15,11 +15,11 @@ export default async function DealersPage({ searchParams }: PageProps<"/dealers"
   const sp = await searchParams;
   const provincia = typeof sp.provincia === "string" && PROVINCE_NAMES.includes(sp.provincia) ? sp.provincia : undefined;
   const dealers = await db.dealer.findMany({
-    where: { status: "APPROVED", province: provincia },
+    where: { status: "APPROVED", demo: false, province: provincia },
     orderBy: [{ verified: "desc" }, { name: "asc" }],
     include: { _count: { select: { vehicles: { where: { status: "ACTIVE" } } } } },
   });
-  const provinces = await db.dealer.groupBy({ by: ["province"], where: { status: "APPROVED" }, _count: true, orderBy: { province: "asc" } });
+  const provinces = await db.dealer.groupBy({ by: ["province"], where: { status: "APPROVED", demo: false }, _count: true, orderBy: { province: "asc" } });
 
   return (
     <>

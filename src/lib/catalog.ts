@@ -1,6 +1,7 @@
 import "server-only";
 import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
+import { LISTED } from "@/lib/search-params";
 import { getBrandLogo } from "@/lib/brand-logos";
 import { BRAND_EMBLEMS } from "@/lib/brand-emblems";
 import { INVENTORY_TAG, INVENTORY_TTL_SECONDS } from "@/lib/inventory-cache";
@@ -19,12 +20,12 @@ async function loadBrowseCatalog() {
     db.brand.findMany({ orderBy: { name: "asc" }, include: { models: { orderBy: { name: "asc" } } } }),
     db.vehicle.groupBy({
       by: ["modelId", "bodyType", "condition", "fuel", "transmission"],
-      where: { status: "ACTIVE" },
+      where: LISTED,
       _count: true,
     }),
     // Una foto por modelo (del vehículo publicado más reciente con fotos) para el fondo del buscador.
     db.vehicle.findMany({
-      where: { status: "ACTIVE", photos: { some: {} } },
+      where: { AND: [LISTED, { photos: { some: {} } }] },
       distinct: ["modelId"],
       orderBy: [{ modelId: "asc" }, { createdAt: "desc" }],
       select: { modelId: true, photos: { select: { url: true }, orderBy: { position: "asc" }, take: 1 } },
@@ -79,7 +80,7 @@ async function loadSearchIndex(): Promise<SearchIndex> {
     }),
     db.vehicle.groupBy({
       by: ["modelId", "trimId", "bodyType", "condition", "fuel", "transmission", "drivetrain", "year"],
-      where: { status: "ACTIVE" },
+      where: LISTED,
       _count: true,
     }),
   ]);

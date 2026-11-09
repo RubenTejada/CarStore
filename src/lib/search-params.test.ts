@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildOrderBy, buildWhere, parseSearchParams, toQueryString } from "./search-params";
+import { NOT_DEMO, buildOrderBy, buildWhere, parseSearchParams, toQueryString } from "./search-params";
 
 describe("parseSearchParams", () => {
   it("parses valid filters and normalizes enums", () => {
@@ -31,8 +31,12 @@ describe("parseSearchParams", () => {
 });
 
 describe("buildWhere", () => {
-  it("always restricts to active vehicles", () => {
-    expect(buildWhere({})).toEqual({ AND: [{ status: "ACTIVE" }] });
+  it("always restricts to active vehicles outside demo dealers", () => {
+    expect(buildWhere({})).toEqual({ AND: [{ status: "ACTIVE" }, NOT_DEMO] });
+  });
+
+  it("shows a demo dealer's own inventory on its page", () => {
+    expect(buildWhere({ dealer: "demo" })).toEqual({ AND: [{ status: "ACTIVE" }, { dealer: { slug: "demo" } }] });
   });
 
   it("omits a dimension for facet counts", () => {
@@ -53,7 +57,7 @@ describe("buildWhere", () => {
 
   it("requires every selected feature", () => {
     const where = buildWhere(parseSearchParams({ car: "a,b" }));
-    expect((where.AND as unknown[]).length).toBe(3);
+    expect((where.AND as unknown[]).length).toBe(4);
   });
 
   it("matches a 4-digit word as year", () => {

@@ -3,6 +3,7 @@ import { cache } from "react";
 import Link from "next/link";
 import { after } from "next/server";
 import { visitNetwork } from "@/lib/social/caption";
+import { NOT_DEMO } from "@/lib/search-params";
 import { notFound, permanentRedirect } from "next/navigation";
 import { headers } from "next/headers";
 import { officialDomainOf } from "@/lib/site-host";
@@ -114,7 +115,7 @@ export default async function VehiclePage({ params, searchParams }: PageProps<"/
   }
 
   const similar = await db.vehicle.findMany({
-    where: { status: "ACTIVE", id: { not: v.id }, ...(official && { dealerId: v.dealerId }), OR: [{ modelId: v.modelId }, { bodyType: v.bodyType, priceDop: { gte: v.priceDop * 0.6, lte: v.priceDop * 1.4 } }] },
+    where: { status: "ACTIVE", id: { not: v.id }, ...(official ? { dealerId: v.dealerId } : { AND: [NOT_DEMO] }), OR: [{ modelId: v.modelId }, { bodyType: v.bodyType, priceDop: { gte: v.priceDop * 0.6, lte: v.priceDop * 1.4 } }] },
     select: vehicleCardSelect,
     take: 4,
     orderBy: { createdAt: "desc" },

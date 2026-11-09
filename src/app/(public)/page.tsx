@@ -3,6 +3,7 @@ import { JsonLd } from "@/components/seo/json-ld";
 import { pageMetadata, SITE_DESCRIPTION, SITE_NAME, SITE_TITLE, siteUrl } from "@/lib/seo";
 import { BadgeCheck, MapPin } from "lucide-react";
 import { db } from "@/lib/db";
+import { LISTED } from "@/lib/search-params";
 import { FREE_PLAN } from "@/lib/listing-rules";
 import { getBrowseCatalog } from "@/lib/catalog";
 import { getFeaturedVehicles } from "@/lib/search";
@@ -28,11 +29,11 @@ export default async function HomePage() {
     getBrowseCatalog(),
     getFeaturedVehicles(10),
     db.dealer.findMany({
-      where: { status: "APPROVED" },
+      where: { status: "APPROVED", demo: false },
       orderBy: [{ verified: "desc" }, { name: "asc" }],
       include: { _count: { select: { vehicles: { where: { status: "ACTIVE" } } } } },
     }),
-    db.vehicle.count({ where: { status: "ACTIVE" } }),
+    db.vehicle.count({ where: LISTED }),
     db.plan.findMany({ where: { active: true }, orderBy: { priceDop: "asc" } }),
   ]);
 

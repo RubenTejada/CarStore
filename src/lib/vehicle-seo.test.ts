@@ -54,3 +54,9 @@ describe("unpublished listings", () => {
     expect(vehicleMetadata(null).robots).toMatchObject({ index: false });
   });
 });
+
+it("keeps the share preview of a demo dealer's listing but does not index it", () => {
+  const metadata = vehicleMetadata({ ...listing, dealer: { name: "TuCarro Demo Motors", slug: "tucarro-demo-motors", demo: true } });
+  expect(metadata.robots).toMatchObject({ index: false });
+  expect(metadata.openGraph).toMatchObject({ images: [{ url: expect.stringContaining("rav4.webp") }] });
+});

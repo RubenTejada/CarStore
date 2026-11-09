@@ -59,8 +59,13 @@ async function graph<T>(pathname: string, { token, params = {}, method = "GET" }
   return body;
 }
 
+/**
+ * Diálogo de autorización. Las apps de tipo Empresa usan «Inicio de sesión con Facebook para empresas»,
+ * que pide los permisos con una configuración (META_LOGIN_CONFIG_ID) en lugar de `scope`.
+ */
 export function authorizeUrl(state: string, redirectUri: string) {
-  const params = new URLSearchParams({ client_id: process.env.META_APP_ID ?? "", redirect_uri: redirectUri, state, response_type: "code", scope: META_SCOPES.join(",") });
+  const configId = process.env.META_LOGIN_CONFIG_ID;
+  const params = new URLSearchParams({ client_id: process.env.META_APP_ID ?? "", redirect_uri: redirectUri, state, response_type: "code", ...(configId ? { config_id: configId } : { scope: META_SCOPES.join(",") }) });
   return `https://www.facebook.com/${GRAPH_VERSION}/dialog/oauth?${params}`;
 }
 

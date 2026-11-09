@@ -4,6 +4,7 @@ import { resolveSitemap } from "next/dist/build/webpack/loaders/metadata/resolve
 const { vehicles, dealers } = vi.hoisted(() => ({ vehicles: vi.fn(), dealers: vi.fn() }));
 vi.mock("@/lib/db", () => ({ db: { vehicle: { findMany: vehicles }, dealer: { findMany: dealers } } }));
 import sitemap, { dynamic } from "./sitemap";
+import { LISTED } from "@/lib/search-params";
 import robots from "./robots";
 
 afterEach(() => { vi.unstubAllEnvs(); vi.clearAllMocks(); });
@@ -24,8 +25,8 @@ it("discovers newly published cars and removes paused cars on the next sitemap r
   expect(dynamic).toBe("force-dynamic");
   expect((await sitemap()).some((entry) => entry.url.includes("newcar"))).toBe(false);
   const published = await sitemap();
-  expect(vehicles).toHaveBeenCalledWith(expect.objectContaining({ where: { status: "ACTIVE" } }));
-  expect(dealers).toHaveBeenCalledWith(expect.objectContaining({ where: { status: "APPROVED" } }));
+  expect(vehicles).toHaveBeenCalledWith(expect.objectContaining({ where: LISTED }));
+  expect(dealers).toHaveBeenCalledWith(expect.objectContaining({ where: { status: "APPROVED", demo: false } }));
   expect(published).toContainEqual({ url: "https://autos.example/vehiculos/newcar/toyota-corolla-2024", images: ["https://autos.example/uploads/car.webp"] });
   expect(published).toContainEqual({ url: "https://autos.example/dealers/autos-santiago" });
   expect(published.some((entry) => /login|registro|panel|admin|comparar/.test(entry.url))).toBe(false);
