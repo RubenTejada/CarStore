@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { inventoryChanged } from "@/lib/inventory-cache";
 import { requireUser } from "@/lib/auth";
 import { slugify } from "@/lib/labels";
+import { normalizeDomain, portalDomain } from "@/lib/site-host";
 import { FEATURE_ICON_KEYS } from "@/lib/feature-icons";
 import { BodyType, DealerStatus, FeatureCategory } from "@/generated/prisma/enums";
 import type { FormState } from "./auth";
@@ -57,6 +58,23 @@ export async function toggleDealerVerified(id: string): Promise<FormState> {
   if (!d) return { error: "Dealer no encontrado." };
   await db.dealer.update({ where: { id }, data: { verified: !d.verified } });
   return done(d.verified ? "Verificación retirada." : "Dealer verificado.");
+}
+
+/**
+ * Dominio propio de la página oficial. Solo lo asigna la administración, que además debe agregarlo
+ * al alojamiento con su certificado; se sirve mientras el dealer tenga el plan Página Oficial vigente.
+ */
+export async function setDealerDomain(id: string, _: FormState, form: FormData): Promise<FormState> {
+  await admin();
+  const raw = String(form.get("customDomain") ?? "").trim();
+  const customDomain = raw ? normalizeDomain(raw) : null;
+  if (raw && !customDomain) return { error: "Dominio inválido. Escríbelo como tudealer.com.do." };
+  if (customDomain === portalDomain()) return { error: "Ese es el dominio del portal." };
+  const owner = customDomain && (await db.dealer.findUnique({ where: { customDomain }, select: { id: true, name: true } }));
+  if (owner && owner.id !== id) return { error: `Ese dominio ya pertenece a ${owner.name}.` };
+  const { count } = await db.dealer.updateMany({ where: { id }, data: { customDomain } });
+  if (!count) return { error: "Dealer no encontrado." };
+  return done(customDomain ? `Dominio ${customDomain} asignado.` : "Dominio retirado.");
 }
 
 // ---------- Usuarios ----------
@@ -198,14 +216,26 @@ const planSchema = z.object({
   featuredSlots: z.coerce.number().int().min(0),
   durationDays: z.coerce.number().int().min(1).max(366),
   forDealers: z.boolean(),
+  officialSite: z.boolean(),
+  socialModule: z.boolean(),
   active: z.boolean(),
 });
 
 export async function savePlan(id: string | null, _: FormState, form: FormData): Promise<FormState> {
   await admin();
-  const parsed = planSchema.safeParse({ ...Object.fromEntries(form), forDealers: form.get("forDealers") === "on", active: form.get("active") === "on" });
+  const parsed = planSchema.safeParse({ ...Object.fromEntries(form), forDealers: form.get("forDealers") === "on", officialSite: form.get("officialSite") === "on", socialModule: form.get("socialModule") === "on", active: form.get("active") === "on" });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
-  if (id) await db.plan.update({ where: { id }, data: parsed.data });
+  if (parsed.data.officialSite && !parsed.data.forDealers) return { error: "La página oficial solo puede ofrecerse en planes para dealers." };
+  if (parsed.data.socialModule && !parsed.data.forDealers) return { error: "El módulo de redes sociales solo puede ofrecerse en planes para dealers." };
+  if (id) {
+    const current = await db.plan.findUnique({ where: { id } });
+    if (!current) return { error: "Plan no encontrado." };
+    const d = parsed.data;
+    const contractualChange = current.priceDop !== d.priceDop || current.maxActiveListings !== d.maxActiveListings || current.featuredSlots !== d.featuredSlots || current.durationDays !== d.durationDays || current.forDealers !== d.forDealers || current.officialSite !== d.officialSite || current.socialModule !== d.socialModule;
+    if (contractualChange && await db.subscription.count({ where: { planId: id, status: { in: ["PENDING", "ACTIVE"] } } }))
+      return { error: "Este plan tiene solicitudes o períodos contratados. Crea un plan nuevo para cambiar precio, cupos, duración, destinatarios, página oficial o módulo de redes sin alterar contratos existentes." };
+    await db.plan.update({ where: { id }, data: d });
+  }
   else await db.plan.create({ data: parsed.data });
   return done(id ? "Plan actualizado." : "Plan creado.");
 }

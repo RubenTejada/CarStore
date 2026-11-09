@@ -7,6 +7,7 @@ import { FormMessage } from "@/components/forms/form-message";
 import { useFormAction } from "@/components/forms/use-form-action";
 import { button, input, label } from "@/components/ui/styles";
 import { cn } from "@/lib/cn";
+import { LegalAcceptance, LegalLink } from "@/components/legal/acceptance";
 
 type Props = {
   vehicleId: string;
@@ -90,7 +91,8 @@ export function ContactRequestForm({ vehicleId, defaults, minDate, maxDate }: Pr
           className={cn(input, "h-auto py-2.5")}
         />
       </div>
-      <p className="text-xs text-muted">Tus datos se envían solo al vendedor de este vehículo para que te contacte.</p>
+      <LegalAcceptance>Autorizo a TuCarroOnline a guardar esta solicitud y compartir mi nombre, teléfono, correo y mensaje con el vendedor de este vehículo y su equipo autorizado para responderme, según la <LegalLink doc="privacidad">Política de privacidad</LegalLink>. Esto no autoriza publicidad adicional.</LegalAcceptance>
+      <p className="text-xs text-muted">Enviar no reserva el vehículo ni confirma una cita. La prueba de manejo debe acordarse con el vendedor.</p>
       <button type="submit" disabled={pending} className={cn(button("brand", "lg"), "w-full sm:w-auto")}>
         {kind === "TEST_DRIVE" ? <CalendarCheck className="size-5" aria-hidden /> : <Send className="size-5" aria-hidden />}
         {pending ? "Enviando…" : kind === "TEST_DRIVE" ? "Pedir prueba de manejo" : "Enviar al vendedor"}

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { BellRing, Building2, Car, CreditCard, Import, Inbox, LayoutDashboard, Plus, Users } from "lucide-react";
+import { BellRing, Building2, Car, CreditCard, Import, Inbox, LayoutDashboard, Megaphone, Plus, Users } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { PanelShell } from "@/components/panel/shell";
 import type { NavItem } from "@/components/panel/side-nav";
@@ -17,6 +17,7 @@ export default async function PanelLayout({ children }: LayoutProps<"/panel">) {
     ...(user.dealerId
       ? [
           { href: "/panel/vehiculos/importar", label: "Importar inventario", icon: <Import className="size-4.5" aria-hidden /> },
+          { href: "/panel/redes", label: "Redes sociales", icon: <Megaphone className="size-4.5" aria-hidden /> },
           { href: "/panel/dealer", label: "Mi dealer", icon: <Building2 className="size-4.5" aria-hidden /> },
           { href: "/panel/equipo", label: "Equipo", icon: <Users className="size-4.5" aria-hidden /> },
         ]

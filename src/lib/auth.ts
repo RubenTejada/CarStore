@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 import type { AuthTokenKind, Role } from "@/generated/prisma/enums";
+import { LEGAL_VERSION } from "@/lib/legal";
 
 export const SESSION_COOKIE = "cs_session";
 const SESSION_DAYS = 30;
@@ -53,6 +54,7 @@ export const getCurrentUser = cache(async () => {
           dealerId: true,
           emailVerifiedAt: true,
           alertsEnabled: true,
+          legalVersion: true,
           dealer: { select: { id: true, name: true, slug: true, status: true, logoUrl: true } },
         },
       },
@@ -92,6 +94,7 @@ export async function consumeAuthToken(token: string, kind: AuthTokenKind) {
 export async function requireUser(...roles: Role[]): Promise<CurrentUser> {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  if (user.legalVersion !== LEGAL_VERSION) redirect("/legal/aceptar");
   if (roles.length && !roles.includes(user.role)) redirect("/");
   return user;
 }

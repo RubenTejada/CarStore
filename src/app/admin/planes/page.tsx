@@ -5,7 +5,7 @@ import { PageTitle } from "@/components/panel/shell";
 import { SimpleForm } from "@/components/forms/simple-form";
 import { card, input, label } from "@/components/ui/styles";
 
-type Plan = { id: string; name: string; description: string | null; priceDop: number; maxActiveListings: number; featuredSlots: number; durationDays: number; forDealers: boolean; active: boolean };
+type Plan = { id: string; name: string; description: string | null; priceDop: number; maxActiveListings: number; featuredSlots: number; durationDays: number; forDealers: boolean; officialSite: boolean; socialModule: boolean; active: boolean };
 
 export default async function AdminPlans() {
   await requireUser("ADMIN");
@@ -62,6 +62,12 @@ function PlanFields({ plan }: { plan?: Plan }) {
         <div className="flex flex-col justify-end gap-2 pb-1 text-sm">
           <label className="flex items-center gap-2">
             <input type="checkbox" name="forDealers" defaultChecked={plan?.forDealers} className="size-4" /> Para dealers
+          </label>
+          <label className="flex items-center gap-2">
+            <input type="checkbox" name="officialSite" defaultChecked={plan?.officialSite} className="size-4" /> Página oficial (logo y dominio propio)
+          </label>
+          <label className="flex items-center gap-2">
+            <input type="checkbox" name="socialModule" defaultChecked={plan?.socialModule} className="size-4" /> Redes sociales (Facebook e Instagram)
           </label>
           <label className="flex items-center gap-2">
             <input type="checkbox" name="active" defaultChecked={plan?.active ?? true} className="size-4" /> Disponible

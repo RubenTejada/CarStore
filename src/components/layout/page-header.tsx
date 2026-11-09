@@ -19,7 +19,7 @@ export function PageHeader({ title, description, actions, children, width = "7xl
   const band = LOOK === "banda";
   return (
     <header className={cn(band && "relative bg-night text-white")}>
-      <div className={cn("relative mx-auto px-4 sm:px-6", width === "6xl" ? "max-w-6xl" : "max-w-7xl", band ? "py-10" : "pt-10")}>
+      <div className={cn("relative mx-auto px-4 sm:px-6", width === "6xl" ? "max-w-6xl" : "max-w-7xl", band ? "py-7 sm:py-8" : "pt-8")}>
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <h1 className={cn("display", large ? "text-4xl sm:text-5xl" : "text-3xl sm:text-4xl")}>{title}</h1>

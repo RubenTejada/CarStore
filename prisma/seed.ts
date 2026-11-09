@@ -442,10 +442,11 @@ async function main() {
   // Planes
   // El plan Gratis (5 vehículos) no es un registro: aplica a toda cuenta sin plan pagado (ver FREE_PLAN).
   const [pro, dealerStd, , dealerPremium] = await Promise.all([
-    db.plan.create({ data: { name: "Pro", description: "Más vehículos y destacados en la portada.", priceDop: 2_500, maxActiveListings: 15, featuredSlots: 2, durationDays: 60 } }),
-    db.plan.create({ data: { name: "Dealer Estándar", description: "Inventario mediano con perfil de dealer y mapa.", priceDop: 15_000, maxActiveListings: 40, featuredSlots: 3, durationDays: 30, forDealers: true } }),
-    db.plan.create({ data: { name: "Dealer Plus", description: "Más inventario y más destacados en la portada.", priceDop: 25_000, maxActiveListings: 80, featuredSlots: 6, durationDays: 30, forDealers: true } }),
-    db.plan.create({ data: { name: "Dealer Premium", description: "Inventario amplio y máxima visibilidad en la portada.", priceDop: 35_000, maxActiveListings: 150, featuredSlots: 12, durationDays: 30, forDealers: true } }),
+    db.plan.create({ data: { name: "Pro", description: "Más vehículos y destacados en la portada.", priceDop: 500, maxActiveListings: 15, featuredSlots: 2, durationDays: 60 } }),
+    db.plan.create({ data: { name: "Dealer Estándar", description: "Inventario mediano con perfil de dealer y mapa.", priceDop: 3_500, maxActiveListings: 40, featuredSlots: 3, durationDays: 30, forDealers: true } }),
+    db.plan.create({ data: { name: "Dealer Plus", description: "Más inventario y más destacados en la portada.", priceDop: 5_500, maxActiveListings: 80, featuredSlots: 6, durationDays: 30, forDealers: true } }),
+    db.plan.create({ data: { name: "Dealer Premium", description: "Inventario amplio y máxima visibilidad en la portada.", priceDop: 7_500, maxActiveListings: 150, featuredSlots: 12, durationDays: 30, forDealers: true, socialModule: true } }),
+    db.plan.create({ data: { name: "Página Oficial", description: "Tu inventario con tu marca: tu logo y tu propio dominio.", priceDop: 10_000, maxActiveListings: 250, featuredSlots: 20, durationDays: 30, forDealers: true, officialSite: true, socialModule: true } }),
   ]);
 
   // Usuarios

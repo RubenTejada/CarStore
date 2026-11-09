@@ -11,6 +11,8 @@ import { sendPasswordResetEmail, sendVerificationEmail } from "@/lib/account-ema
 import { takeToken } from "@/lib/rate-limit";
 import { PROVINCES, PROVINCE_NAMES } from "@/lib/provinces";
 import { slugify } from "@/lib/labels";
+import { legalFields } from "@/lib/legal-validation";
+import { LEGAL_VERSION } from "@/lib/legal";
 
 export type FormState = { error?: string; ok?: string } | undefined;
 
@@ -28,6 +30,7 @@ export async function login(_: FormState, form: FormData): Promise<FormState> {
     return { error: "Correo o contraseña incorrectos." };
   if (!user.active) return { error: "Tu cuenta está desactivada. Contacta a la administración." };
   await createSession(user.id);
+  if (user.legalVersion !== LEGAL_VERSION) redirect("/legal/aceptar");
   redirect(safeNext(form.get("siguiente")) ?? homeFor(user.role));
 }
 
@@ -46,6 +49,8 @@ const registerSchema = z
     password: z.string().min(8, "La contraseña debe tener al menos 8 caracteres").max(100),
     dealerName: z.string().trim().max(80).optional(),
     province: z.string().optional(),
+    ...legalFields,
+    alerts: z.literal("on").optional(),
   })
   .refine((d) => d.kind === "comprador" || d.phone.length >= 7, { message: "Escribe un teléfono válido" })
   .refine((d) => d.kind !== "dealer" || (d.dealerName && d.dealerName.length >= 2), {
@@ -74,7 +79,16 @@ export async function register(_: FormState, form: FormData): Promise<FormState>
     dealerId = dealer.id;
   }
   const user = await db.user.create({
-    data: { email: d.email, name: d.name, phone: d.phone || null, passwordHash, role: d.kind === "dealer" ? "DEALER" : d.kind === "comprador" ? "BUYER" : "SELLER", dealerId },
+    data: {
+      email: d.email, name: d.name, phone: d.phone || null, passwordHash,
+      role: d.kind === "dealer" ? "DEALER" : d.kind === "comprador" ? "BUYER" : "SELLER", dealerId,
+      alertsEnabled: d.alerts === "on",
+      legalVersion: LEGAL_VERSION,
+      legalAcceptances: { create: [
+        { kind: "ACCOUNT", version: LEGAL_VERSION },
+        ...(d.alerts === "on" ? [{ kind: "ALERTS_ENABLED", version: LEGAL_VERSION }] : []),
+      ] },
+    },
   });
   await createSession(user.id);
   after(() => sendVerificationEmail(user));
@@ -140,7 +154,11 @@ export async function resetPassword(_: FormState, form: FormData): Promise<FormS
 /** Activa o desactiva las alertas por correo de la cuenta actual. */
 export async function setAlerts(enabled: boolean): Promise<FormState> {
   const user = await requireUser();
-  await db.user.update({ where: { id: user.id }, data: { alertsEnabled: enabled } });
+  if (typeof enabled !== "boolean") return { error: "Preferencia inválida." };
+  await db.$transaction([
+    db.user.update({ where: { id: user.id }, data: { alertsEnabled: enabled } }),
+    db.legalAcceptance.create({ data: { userId: user.id, kind: enabled ? "ALERTS_ENABLED" : "ALERTS_DISABLED", version: LEGAL_VERSION } }),
+  ]);
   revalidatePath("/cuenta");
   return { ok: enabled ? "Alertas activadas." : "Alertas desactivadas." };
 }

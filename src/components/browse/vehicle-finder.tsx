@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { ArrowRight, ChevronLeft, type LucideIcon } from "lucide-react";
+import { ArrowRight, ChevronDown, ChevronLeft, type LucideIcon } from "lucide-react";
 import type { BodyType, Fuel, Transmission } from "@/generated/prisma/enums";
 import { BODY_TYPES, FUEL_LABEL, TRANSMISSION_LABEL } from "@/lib/labels";
 import { cn } from "@/lib/cn";
@@ -13,6 +13,7 @@ import type { StockRow } from "@/lib/catalog";
 import { BodySilhouette } from "./body-silhouette";
 import { BodyTypeScene } from "./body-type-scene";
 import { SearchBox } from "./search-box";
+import { PROVINCE_NAMES } from "@/lib/provinces";
 import { BrandLogo, BrandTileBody, brandCell, brandGrid, brandTile, type BrandMark } from "./brand-logo";
 
 type FinderBrand = BrandMark & {
@@ -43,6 +44,8 @@ const TRANSMISSIONS = (Object.keys(TRANSMISSION_ICON) as Transmission[]).map((va
 
 export function VehicleFinder({ brands }: { brands: FinderBrand[] }) {
   const reduce = useReducedMotion();
+  const [budget, setBudget] = useState("");
+  const [province, setProvince] = useState("");
   const [type, setType] = useState<BodyType | null>(null);
   const [brand, setBrand] = useState<FinderBrand | null>(null);
   const [condition, setCondition] = useState<"" | "nuevo" | "usado">("");
@@ -113,213 +116,236 @@ export function VehicleFinder({ brands }: { brands: FinderBrand[] }) {
 
   return (
     <div className="text-white">
-      <div className="flex flex-wrap items-center gap-3">
-        <SearchBox
-          tone="dark"
-          params={Object.fromEntries(new URLSearchParams(params({})))}
-          placeholder="Marca, modelo, versión o tipo: jeepeta Toyota 2020"
-          className="min-w-0 flex-1 basis-72"
-        />
-        <div role="radiogroup" aria-label="Condición" className="flex rounded-xl border border-white/15 bg-white/5 p-1">
-          {(
-            [
-              ["", "Todos"],
-              ["nuevo", "Nuevos"],
-              ["usado", "Usados"],
-            ] as const
-          ).map(([value, label]) => (
-            <button
-              key={value}
-              type="button"
-              role="radio"
-              aria-checked={condition === value}
-              onClick={() => setCondition(value)}
-              className={cn(
-                "h-11 rounded-lg px-4 text-sm font-semibold transition-colors",
-                condition === value ? "bg-white text-night" : "text-white/75 hover:text-white",
-              )}
-            >
-              {label}
-            </button>
+      <SearchBox
+        tone="dark"
+        submitLabel="Buscar vehículos"
+        params={{ precioMax: budget, provincia: province }}
+        placeholder="Marca o modelo, por ejemplo: Toyota Corolla"
+      >
+        <div className="grid grid-cols-2 gap-3">
+          {[
+            { id: "home-budget", label: "Presupuesto máximo", value: budget, onChange: setBudget, options: [["", "Cualquier precio"], ["500000", "RD$500,000"], ["1000000", "RD$1,000,000"], ["1500000", "RD$1,500,000"], ["2000000", "RD$2,000,000"], ["3000000", "RD$3,000,000"], ["5000000", "RD$5,000,000"]] },
+            { id: "home-province", label: "Provincia", value: province, onChange: setProvince, options: [["", "Todo el país"], ...PROVINCE_NAMES.map((p) => [p, p])] },
+          ].map((field) => (
+            <div key={field.id} className="min-w-0">
+              <label htmlFor={field.id} className="mb-1.5 block text-sm font-medium text-white/75">{field.label}</label>
+              <select id={field.id} value={field.value} onChange={(e) => field.onChange(e.target.value)} className="h-11 w-full rounded-lg border border-white/20 bg-night-2 px-3 text-sm text-white">
+                {field.options.map(([value, text]) => <option key={value} value={value}>{text}</option>)}
+              </select>
+            </div>
           ))}
         </div>
+      </SearchBox>
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
+        <Link href="/vehiculos" className="font-semibold text-white underline underline-offset-4">Ver todos los vehículos</Link>
+        <Link href="/vehiculos?vista=mapa" className="text-white/75 hover:text-white">Buscar en el mapa</Link>
       </div>
-
-      <div className="mt-4 flex flex-wrap gap-x-6 gap-y-3">
-        <ChipGroup
-          label="Combustible"
-          options={FUELS.map((f) => ({ ...f, label: FUEL_LABEL[f.value] }))}
-          value={fuel}
-          onChange={setFuel}
-        />
-        <ChipGroup
-          label="Transmisión"
-          options={TRANSMISSIONS.map((t) => ({ ...t, label: TRANSMISSION_LABEL[t.value] }))}
-          value={transmission}
-          onChange={setTransmission}
-        />
-      </div>
-
-      <ol className="mt-8 flex items-center gap-2 text-sm" aria-label="Pasos">
-        {STEPS.map((s, i) => (
-          <li key={s} className="flex items-center gap-2">
-            <button
-              type="button"
-              disabled={i > step}
-              onClick={() => {
-                if (i === 0) {
-                  setType(null);
-                  setBrand(null);
-                } else if (i === 1) setBrand(null);
-              }}
-              aria-current={i === step ? "step" : undefined}
-              className={cn(
-                "flex items-center gap-2 rounded-full py-1 pr-3 pl-1 transition-colors",
-                i === step ? "bg-white text-night" : i < step ? "text-white hover:bg-white/10" : "text-white/40",
-              )}
-            >
-              <span
+      <details className="group/explore mt-5 border-t border-white/15 pt-4">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold [&::-webkit-details-marker]:hidden">
+          Explorar por tipo, marca y modelo
+          <ChevronDown className="size-4 shrink-0 transition-transform group-open/explore:rotate-180" aria-hidden />
+        </summary>
+        <p className="mt-2 text-sm text-white/65">Explora el catálogo completo con el selector. También puedes ver resultados en cualquier paso.</p>
+        <div role="radiogroup" aria-label="Condición del catálogo" className="mt-4 inline-flex rounded-xl border border-white/15 bg-white/5 p-1">
+            {(
+              [
+                ["", "Todos"],
+                ["nuevo", "Nuevos"],
+                ["usado", "Usados"],
+              ] as const
+            ).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                role="radio"
+                aria-checked={condition === value}
+                onClick={() => setCondition(value)}
                 className={cn(
-                  "grid size-6 place-items-center rounded-full text-xs font-bold",
-                  i === step ? "bg-accent text-white" : i < step ? "bg-white/20" : "border border-white/25",
+                  "h-11 rounded-lg px-4 text-sm font-semibold transition-colors",
+                  condition === value ? "bg-white text-night" : "text-white/75 hover:text-white",
                 )}
               >
-                {i + 1}
-              </span>
-              {i === 0 && typeInfo && <BodySilhouette type={typeInfo.value} className="h-4 w-10 shrink-0 [--glass:rgba(11,26,54,0.45)] [--rim:#8fa3c4] [--tire:#050b18]" />}
-              {i === 1 && brand && (
-                <span aria-hidden className="contents">
-                  <BrandLogo brand={brand} className="size-5 shrink-0" />
-                </span>
-              )}
-              {i === 0 && typeInfo ? typeInfo.plural : i === 1 && brand ? brand.name : s}
-            </button>
-            {i < STEPS.length - 1 && <span className="h-px w-6 bg-white/25" aria-hidden />}
-          </li>
-        ))}
-      </ol>
+                {label}
+              </button>
+            ))}
+        </div>
 
-      <div className="relative mt-5 min-h-[17rem]">
-        <AnimatePresence mode="wait" initial={false}>
-          {step === 0 && (
-            <motion.div key="types" {...slide}>
-              <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                {BODY_TYPES.map((t, i) => {
-                  const n = typeCounts[t.value] ?? 0;
-                  return (
-                    <motion.li
-                      key={t.value}
-                      initial={reduce ? false : { opacity: 0, x: -60 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.15 + i * 0.06, type: "spring", stiffness: 140, damping: 18 }}
-                    >
-                      <button
-                        type="button"
-                        disabled={n === 0 || driving !== null}
-                        onClick={() => chooseType(t.value)}
-                        data-driving={driving === t.value || undefined}
-                        className="group flex h-full w-full flex-col items-start rounded-xl border border-white/10 bg-white/[0.06] p-4 text-left transition-colors hover:border-white/40 hover:bg-white/[0.12] disabled:opacity-40 data-[driving]:border-white/40 data-[driving]:bg-white/[0.12] data-[driving]:opacity-100"
-                      >
-                        <BodyTypeScene type={t.value} />
-                        <span className="wide mt-3 text-[15px] font-bold">{t.label}</span>
-                        <span className="text-sm text-white/60">{n === 1 ? "1 vehículo" : `${n} vehículos`}</span>
-                      </button>
-                    </motion.li>
-                  );
-                })}
-              </ul>
-            </motion.div>
-          )}
+        <div className="mt-4 flex flex-wrap gap-x-6 gap-y-3">
+          <ChipGroup
+            label="Combustible"
+            options={FUELS.map((f) => ({ ...f, label: FUEL_LABEL[f.value] }))}
+            value={fuel}
+            onChange={setFuel}
+          />
+          <ChipGroup
+            label="Transmisión"
+            options={TRANSMISSIONS.map((t) => ({ ...t, label: TRANSMISSION_LABEL[t.value] }))}
+            value={transmission}
+            onChange={setTransmission}
+          />
+        </div>
 
-          {step === 1 && (
-            <motion.div key="brands" {...slide}>
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <BackButton onClick={() => setType(null)} />
-                <Link href={href({})} className="text-sm font-semibold text-white underline-offset-4 hover:underline">
-                  Ver todas las {typeInfo?.plural.toLowerCase()}
-                </Link>
-              </div>
-              <ul className={brandGrid}>
-                {brandsForType.map(({ brand: b, count, onlyModel }, i) => (
-                  <motion.li
-                    key={b.slug}
-                    className={brandCell}
-                    initial={reduce ? false : { opacity: 0, y: 16 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ type: "spring", stiffness: 260, damping: 18, delay: i * 0.035 }}
-                  >
-                    {/* Con un solo modelo no hay nada que elegir: directo a los resultados. */}
-                    {onlyModel ? (
-                      <Link href={href({ marca: b.slug, modelo: onlyModel.slug })} className={cn("relative", brandTile)}>
-                        <BrandTileBody brand={b} count={count} lively />
-                      </Link>
-                    ) : (
-                      <button type="button" onClick={() => setBrand(b)} className={cn("relative", brandTile)}>
-                        <BrandTileBody brand={b} count={count} lively />
-                      </button>
-                    )}
-                  </motion.li>
-                ))}
-              </ul>
-            </motion.div>
-          )}
-
-          {step === 2 && brand && (
-            <motion.div key="models" {...slide}>
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <BackButton onClick={() => setBrand(null)} />
-                <Link href={href({ marca: brand.slug })} className="text-sm font-semibold text-white underline-offset-4 hover:underline">
-                  Ver todos los {brand.name}
-                </Link>
-              </div>
-              <div className="relative flex items-center gap-4 overflow-hidden rounded-xl bg-white p-4 text-night">
-                {photo && (
-                  <div className="absolute inset-y-0 right-0 w-full sm:aspect-[5/1] sm:w-auto sm:max-w-full" aria-hidden>
-                    <Image src={photo} alt="" fill sizes="(min-width: 640px) 560px, 100vw" className="object-cover" />
-                    <div className="absolute inset-0 bg-gradient-to-r from-white via-white/40 to-transparent" />
-                  </div>
+        <ol className="mt-5 flex items-center gap-2 text-sm" aria-label="Exploración opcional">
+          {STEPS.map((s, i) => (
+            <li key={s} className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={i > step}
+                onClick={() => {
+                  if (i === 0) {
+                    setType(null);
+                    setBrand(null);
+                  } else if (i === 1) setBrand(null);
+                }}
+                aria-current={i === step ? "step" : undefined}
+                className={cn(
+                  "flex items-center gap-2 rounded-full py-1 pr-3 pl-1 transition-colors",
+                  i === step ? "bg-white text-night" : i < step ? "text-white hover:bg-white/10" : "text-white/40",
                 )}
-                <BrandLogo brand={brand} colored className="relative size-14 shrink-0" />
-                <div className="relative">
-                  <p className="display text-2xl">{brand.name}</p>
-                  <p className="text-sm text-[#566176]">Elige un modelo</p>
-                </div>
-              </div>
-
-              <h3 className="mt-5 text-sm font-semibold text-white/70">Modelo</h3>
-              <ul className="mt-2 flex flex-wrap gap-2">
-                {models.map((m, i) => (
-                  <motion.li
-                    key={m.slug}
-                    initial={reduce ? false : { opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.04 }}
-                  >
-                    <Link
-                      href={href({ marca: brand.slug, modelo: m.slug })}
-                      className="flex min-h-11 items-center gap-2.5 rounded-full border border-white/20 bg-white/10 py-2 pr-3 pl-3.5 font-semibold transition-colors hover:border-white/50"
-                    >
-                      <BodySilhouette type={m.bodyType} className="h-4 w-10 shrink-0 [--glass:rgba(11,26,54,0.45)] [--rim:#8fa3c4] [--tire:#050b18]" />
-                      {m.name}
-                      <span className="rounded-full bg-black/25 px-2 text-xs">{m.n}</span>
-                    </Link>
-                  </motion.li>
-                ))}
-              </ul>
-
-              <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
-                <Link
-                  href={href({ marca: brand.slug })}
-                  className="inline-flex h-12 items-center gap-2 rounded-xl bg-accent px-5 font-semibold text-white transition-colors hover:bg-accent/90"
+              >
+                <span
+                  className={cn(
+                    "grid size-6 place-items-center rounded-full text-xs font-bold",
+                    i === step ? "bg-accent text-white" : i < step ? "bg-white/20" : "border border-white/25",
+                  )}
                 >
-                  {total === 1 ? "Ver 1 vehículo" : `Ver ${total} vehículos`}
-                  <ArrowRight className="size-4" aria-hidden />
-                </Link>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+                  {i + 1}
+                </span>
+                {i === 0 && typeInfo && <BodySilhouette type={typeInfo.value} className="h-4 w-10 shrink-0 [--glass:rgba(11,26,54,0.45)] [--rim:#8fa3c4] [--tire:#050b18]" />}
+                {i === 1 && brand && (
+                  <span aria-hidden className="contents">
+                    <BrandLogo brand={brand} className="size-5 shrink-0" />
+                  </span>
+                )}
+                {i === 0 && typeInfo ? typeInfo.plural : i === 1 && brand ? brand.name : s}
+              </button>
+              {i < STEPS.length - 1 && <span className="h-px w-6 bg-white/25" aria-hidden />}
+            </li>
+          ))}
+        </ol>
+
+        <div className="relative mt-5">
+          <AnimatePresence mode="wait" initial={false}>
+            {step === 0 && (
+              <motion.div key="types" {...slide}>
+                <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  {BODY_TYPES.map((t, i) => {
+                    const n = typeCounts[t.value] ?? 0;
+                    return (
+                      <motion.li
+                        key={t.value}
+                        initial={reduce ? false : { opacity: 0, x: -60 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.15 + i * 0.06, type: "spring", stiffness: 140, damping: 18 }}
+                      >
+                        <button
+                          type="button"
+                          disabled={n === 0 || driving !== null}
+                          onClick={() => chooseType(t.value)}
+                          data-driving={driving === t.value || undefined}
+                          className="group flex h-full w-full flex-col items-start rounded-xl border border-white/10 bg-white/[0.06] p-4 text-left transition-colors hover:border-white/40 hover:bg-white/[0.12] disabled:opacity-40 data-[driving]:border-white/40 data-[driving]:bg-white/[0.12] data-[driving]:opacity-100"
+                        >
+                          <BodyTypeScene type={t.value} />
+                          <span className="wide mt-3 text-[15px] font-bold">{t.label}</span>
+                          <span className="text-sm text-white/60">{n === 1 ? "1 vehículo" : `${n} vehículos`}</span>
+                        </button>
+                      </motion.li>
+                    );
+                  })}
+                </ul>
+              </motion.div>
+            )}
+
+            {step === 1 && (
+              <motion.div key="brands" {...slide}>
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <BackButton onClick={() => setType(null)} />
+                  <Link href={href({})} className="text-sm font-semibold text-white underline-offset-4 hover:underline">
+                    Ver todas las {typeInfo?.plural.toLowerCase()}
+                  </Link>
+                </div>
+                <ul className={brandGrid}>
+                  {brandsForType.map(({ brand: b, count, onlyModel }, i) => (
+                    <motion.li
+                      key={b.slug}
+                      className={brandCell}
+                      initial={reduce ? false : { opacity: 0, y: 16 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ type: "spring", stiffness: 260, damping: 18, delay: i * 0.035 }}
+                    >
+                      {/* Con un solo modelo no hay nada que elegir: directo a los resultados. */}
+                      {onlyModel ? (
+                        <Link href={href({ marca: b.slug, modelo: onlyModel.slug })} className={cn("relative", brandTile)}>
+                          <BrandTileBody brand={b} count={count} lively />
+                        </Link>
+                      ) : (
+                        <button type="button" onClick={() => setBrand(b)} className={cn("relative", brandTile)}>
+                          <BrandTileBody brand={b} count={count} lively />
+                        </button>
+                      )}
+                    </motion.li>
+                  ))}
+                </ul>
+              </motion.div>
+            )}
+
+            {step === 2 && brand && (
+              <motion.div key="models" {...slide}>
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <BackButton onClick={() => setBrand(null)} />
+                  <Link href={href({ marca: brand.slug })} className="text-sm font-semibold text-white underline-offset-4 hover:underline">
+                    Ver todos los {brand.name}
+                  </Link>
+                </div>
+                <div className="relative flex items-center gap-4 overflow-hidden rounded-xl bg-white p-4 text-night">
+                  {photo && (
+                    <div className="absolute inset-y-0 right-0 w-full sm:aspect-[5/1] sm:w-auto sm:max-w-full" aria-hidden>
+                      <Image src={photo} alt="" fill sizes="(min-width: 640px) 560px, 100vw" className="object-cover" />
+                      <div className="absolute inset-0 bg-gradient-to-r from-white via-white/40 to-transparent" />
+                    </div>
+                  )}
+                  <BrandLogo brand={brand} colored className="relative size-14 shrink-0" />
+                  <div className="relative">
+                    <p className="display text-2xl">{brand.name}</p>
+                    <p className="text-sm text-[#566176]">Elige un modelo</p>
+                  </div>
+                </div>
+
+                <h3 className="mt-5 text-sm font-semibold text-white/70">Modelo</h3>
+                <ul className="mt-2 flex flex-wrap gap-2">
+                  {models.map((m, i) => (
+                    <motion.li
+                      key={m.slug}
+                      initial={reduce ? false : { opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.04 }}
+                    >
+                      <Link
+                        href={href({ marca: brand.slug, modelo: m.slug })}
+                        className="flex min-h-11 items-center gap-2.5 rounded-full border border-white/20 bg-white/10 py-2 pr-3 pl-3.5 font-semibold transition-colors hover:border-white/50"
+                      >
+                        <BodySilhouette type={m.bodyType} className="h-4 w-10 shrink-0 [--glass:rgba(11,26,54,0.45)] [--rim:#8fa3c4] [--tire:#050b18]" />
+                        {m.name}
+                        <span className="rounded-full bg-black/25 px-2 text-xs">{m.n}</span>
+                      </Link>
+                    </motion.li>
+                  ))}
+                </ul>
+
+                <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
+                  <Link
+                    href={href({ marca: brand.slug })}
+                    className="inline-flex h-12 items-center gap-2 rounded-xl bg-accent px-5 font-semibold text-white transition-colors hover:bg-accent/90"
+                  >
+                    {total === 1 ? "Ver 1 vehículo" : `Ver ${total} vehículos`}
+                    <ArrowRight className="size-4" aria-hidden />
+                  </Link>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </details>
     </div>
   );
 }

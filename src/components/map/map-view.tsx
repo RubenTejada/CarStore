@@ -10,6 +10,7 @@ import { MapPointLink, SchematicMap } from "./schematic-map";
 import { MarkerPin, PIN_COLOR, PIN_PATH, PIN_VIEW } from "./marker-pin";
 import type { MapPoint } from "./types";
 import { byDistance, formatDistance, useMyLocation, type LatLng } from "./use-my-location";
+import { MapConsent } from "./map-consent";
 
 export const MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
 export const MAP_ID = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID || "DEMO_MAP_ID";
@@ -38,6 +39,7 @@ export function MapView({
       </SchematicMap>
     );
   return (
+    <MapConsent fallback={<SchematicMap points={points} me={me.pos} className={cn("aspect-[1000/718]", className)}><div className="absolute top-2.5 left-2.5 z-10">{locate}</div></SchematicMap>}>
     <div className={cn("overflow-hidden rounded-xl", className)}>
       <APIProvider apiKey={MAPS_KEY} language="es" region="DO">
         <Map
@@ -57,6 +59,7 @@ export function MapView({
         </Map>
       </APIProvider>
     </div>
+    </MapConsent>
   );
 }
 

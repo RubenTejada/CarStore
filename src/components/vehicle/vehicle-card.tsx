@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { BadgeCheck, Gauge, MapPin, Rotate3d, Star, TrendingDown } from "lucide-react";
+import { BadgeCheck, Camera, Gauge, MapPin, Rotate3d, Star, TrendingDown } from "lucide-react";
 import type { VehicleCard as Vehicle } from "@/lib/search";
 import { CONDITION_LABEL, TRANSMISSION_LABEL, formatKm, formatPrice, toUsd } from "@/lib/labels";
 import { vehicleTitle, vehicleUrl } from "@/lib/urls";
@@ -36,26 +36,31 @@ export function VehicleCard({
   const has360 = v.spinFrames.length > 0 || !!v.interiorPano;
   const drop = priceDrop(v);
   const approx = usdRate ? v.currency === "DOP" && formatPrice(toUsd(v.priceDop, usdRate), "USD") : v.currency === "USD" && formatPrice(v.priceDop, "DOP");
-  // Guardar y comparar van fuera del enlace (no se anidan controles) y se superponen a la foto.
+  // Guardar y comparar quedan fuera del enlace para mantener controles independientes.
   return (
-    <div className={cn("relative", className)}>
+    <article className={cn("group relative flex flex-col overflow-hidden rounded-xl border border-line bg-surface transition-[border-color,box-shadow] hover:border-ink/30 hover:shadow-lg", className)}>
       <Link
         href={vehicleUrl(v)}
-        className="group flex h-full flex-col overflow-hidden rounded-xl border border-line bg-surface transition-[border-color,box-shadow] hover:border-ink/40 hover:shadow-[0_10px_30px_-12px_rgba(11,26,54,0.35)]"
+        className="flex flex-1 flex-col"
       >
         <div className="relative aspect-[3/2] overflow-hidden bg-surface-2">
           {spinning ? (
             <SpinViewer frames={v.spinFrames} video={v.spinVideo} alt={`${vehicleTitle(v)} ${v.year}`} priority={priority} sizes={cardSizes} className="absolute inset-0" />
           ) : (
-            photo && (
+            photo ? (
               <Image
                 src={photo}
                 alt={`${vehicleTitle(v)} ${v.year}`}
                 fill
                 priority={priority}
                 sizes={cardSizes}
-                className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                className="object-cover transition-transform duration-500 motion-safe:group-hover:scale-[1.03] motion-reduce:transition-none"
               />
+            ) : (
+              <span className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-sm text-muted">
+                <Camera className="size-7" aria-hidden />
+                Foto no disponible
+              </span>
             )
           )}
           {has360 && (
@@ -64,9 +69,8 @@ export function VehicleCard({
               360°
             </span>
           )}
-          <span className="plate absolute bottom-2.5 left-2.5 text-sm">{v.year}</span>
           <span className="absolute top-2.5 left-2.5 flex gap-1.5">
-            {featured && (
+            {featured && !drop && (
               <span className="flex items-center gap-1 rounded-md bg-sun px-2 py-0.5 text-xs font-bold text-night">
                 <Star className="size-3 fill-current" aria-hidden />
                 Destacado
@@ -84,11 +88,11 @@ export function VehicleCard({
           </span>
         </div>
         <div className="flex flex-1 flex-col p-4">
-          <h3 className="wide text-[17px] leading-tight font-bold">
-            {vehicleTitle(v)}
-            {v.trim && <span className="font-normal text-muted"> {v.trim}</span>}
+          <h3 className="text-[17px] leading-snug font-bold">
+            {vehicleTitle(v)} {v.year}
           </h3>
-          <p className="mt-1 flex flex-wrap items-baseline gap-x-2">
+          <p className="mt-0.5 min-h-5 text-sm text-muted">{v.trim || CONDITION_LABEL[v.condition]}</p>
+          <p className="mt-2 flex min-h-12 flex-col items-start justify-start gap-y-0.5">
             <span className="text-xl font-extrabold tracking-tight text-brand">{formatPrice(v.price, v.currency)}</span>
             {approx && <span className="text-sm text-muted">≈ {approx}</span>}
             {drop && (
@@ -98,7 +102,7 @@ export function VehicleCard({
               </s>
             )}
           </p>
-          <p className="mt-3 mb-4 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted">
+          <p className="mt-3 flex flex-wrap gap-x-3 gap-y-1.5 text-sm text-muted">
             <span className="flex items-center gap-1">
               <Gauge className="size-4" aria-hidden />
               {formatKm(v.mileageKm)}
@@ -109,22 +113,18 @@ export function VehicleCard({
               {v.province}
             </span>
           </p>
-          <p className="mt-auto flex items-center gap-1.5 border-t border-line pt-3 text-sm font-medium">
-            {v.dealer ? (
-              <>
-                {v.dealer.name}
-                {v.dealer.verified && <BadgeCheck className="size-4 text-brand" aria-label="Dealer verificado" />}
-              </>
-            ) : (
-              <span className="text-muted">Vendedor particular</span>
-            )}
-          </p>
         </div>
       </Link>
-      <div className="absolute top-2.5 right-2.5 flex gap-1.5">
+      <div className="absolute top-2.5 right-2.5">
         <FavoriteToggle id={v.id} title={`${vehicleTitle(v)} ${v.year}`} />
-        <CompareToggle item={{ id: v.id, title: vehicleTitle(v), year: v.year, photo }} />
       </div>
-    </div>
+      <div className="mx-4 flex items-center justify-between gap-2 border-t border-line py-2.5">
+        <p className="flex min-w-0 items-center gap-1 text-xs font-medium text-muted">
+          <span className="truncate">{v.dealer?.name ?? "Vendedor particular"}</span>
+          {v.dealer?.verified && <BadgeCheck className="size-4 shrink-0 text-brand" aria-label="Dealer verificado" />}
+        </p>
+        <CompareToggle item={{ id: v.id, title: vehicleTitle(v), year: v.year, photo }} className="shrink-0 bg-transparent px-1 shadow-none" />
+      </div>
+    </article>
   );
 }

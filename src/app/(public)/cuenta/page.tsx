@@ -61,6 +61,7 @@ export default async function AccountPage() {
                   ? "Cada mañana te escribimos si hay vehículos nuevos en tus búsquedas o si bajó de precio alguno que guardaste."
                   : "Las alertas están en pausa: no te escribiremos hasta que las actives."}
               </p>
+              <p className="mt-2 text-xs text-muted">Las alertas son opcionales. Puedes desactivarlas aquí o desde cada correo. <Link href="/legal/privacidad" className="text-brand underline">Privacidad</Link></p>
             </div>
             <AlertsToggle enabled={user.alertsEnabled} />
           </div>
@@ -94,11 +95,12 @@ export default async function AccountPage() {
           <h2 id="saved-title" className="display text-2xl">
             Guardados
           </h2>
-          <p className="mt-1 text-sm text-muted">Se sincronizan con tu cuenta en todos tus dispositivos. Te avisamos si alguno baja de precio.</p>
+          <p className="mt-1 text-sm text-muted">Se sincronizan con tu cuenta en todos tus dispositivos. Si activas las alertas y confirmas tu correo, te avisamos de las rebajas.</p>
           <div className="mt-5">
             <SavedVehicles />
           </div>
         </section>
+        <p className="text-sm"><Link href="/legal/contacto" className="text-brand underline">Solicitar acceso, corrección, supresión de datos o cierre de cuenta</Link></p>
       </div>
     </>
   );

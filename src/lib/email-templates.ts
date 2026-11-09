@@ -1,6 +1,7 @@
 // Plantillas de los correos del portal: HTML sencillo (compatible con clientes de correo) y su versión en texto.
 import { formatPrice } from "@/lib/labels";
 import type { Currency } from "@/generated/prisma/enums";
+import { legalOperator } from "@/lib/legal";
 
 const BRAND = "#0b1a36";
 const ACCENT = "#d0142c";
@@ -14,6 +15,8 @@ type Rendered = { subject: string; html: string; text: string };
 
 /** Párrafos (texto plano, se escapan) o bloques con su propio HTML, un botón y un pie opcional. */
 function layout(subject: string, blocks: (string | Block)[], cta?: { label: string; url: string }, footer?: Block): Rendered {
+  const o = legalOperator();
+  const identity = [o.name, o.rnc && `RNC ${o.rnc}`, o.address, o.email].filter(Boolean).join(" · ");
   const norm = blocks.map((b) => (typeof b === "string" ? { text: b, html: `<p style="margin:0 0 16px">${escapeHtml(b)}</p>` } : { text: b.text, html: b.html ?? `<p style="margin:0 0 16px">${escapeHtml(b.text)}</p>` }));
   const button = cta
     ? `<p style="margin:24px 0"><a href="${escapeHtml(cta.url)}" style="background:${ACCENT};color:#ffffff;text-decoration:none;font-weight:bold;padding:12px 22px;border-radius:8px;display:inline-block">${escapeHtml(cta.label)}</a></p>`
@@ -25,8 +28,9 @@ function layout(subject: string, blocks: (string | Block)[], cta?: { label: stri
 ${norm.map((b) => b.html).join("\n")}${button}
 </div>
 ${footer ? `<div style="padding:16px 4px;font-size:12px;color:#6b7280">${footer.html ?? escapeHtml(footer.text)}</div>` : ""}
+${identity ? `<div style="padding:8px 4px;font-size:12px;color:#6b7280">${escapeHtml(identity)}</div>` : ""}
 </div></body></html>`;
-  const text = [...norm.map((b) => b.text), cta ? `${cta.label}: ${cta.url}` : "", footer?.text ?? ""].filter(Boolean).join("\n\n");
+  const text = [...norm.map((b) => b.text), cta ? `${cta.label}: ${cta.url}` : "", footer?.text ?? "", identity].filter(Boolean).join("\n\n");
   return { subject, html, text };
 }
 

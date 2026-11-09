@@ -12,6 +12,7 @@ import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { button, card, input, label } from "@/components/ui/styles";
 import { cn } from "@/lib/cn";
 import type { ImportItemStatus } from "@/generated/prisma/enums";
+import { LegalAcceptance, LegalLink } from "@/components/legal/acceptance";
 
 export const metadata = { title: "Importar inventario" };
 
@@ -54,10 +55,8 @@ export default async function ImportInventory() {
             </label>
             <input id="url" name="url" type="url" required inputMode="url" placeholder="https://…" className={input} />
           </div>
-          <label className="flex items-start gap-2 text-sm text-muted">
-            <input type="checkbox" name="owner" required className="mt-0.5 size-4 accent-[var(--brand)]" />
-            Confirmo que este inventario es de mi dealer.
-          </label>
+          <LegalAcceptance>Represento al dealer, tengo autorización para copiar y republicar los textos y fotografías y he comprobado las condiciones del sitio de origen. Acepto la <LegalLink doc="publicaciones">Política de publicaciones e importación</LegalLink>.</LegalAcceptance>
+          <p className="text-xs text-muted">Claude (Anthropic o Microsoft Foundry) procesa el contenido de origen. No importes datos sensibles ni de terceros sin autorización; revisa cada borrador antes de publicarlo.</p>
         </SimpleForm>
       </section>
 

@@ -46,8 +46,17 @@ export async function saveImageBuffer(buffer: Buffer, kind: UploadKind): Promise
   return `/uploads/${month}/${name}`;
 }
 
+/** Guarda la imagen generada de un anuncio para redes como JPEG (Instagram solo publica JPEG). */
+export async function saveSocialImage(jpeg: Buffer): Promise<string> {
+  const month = new Date().toISOString().slice(0, 7);
+  const name = `${randomBytes(12).toString("hex")}.jpg`;
+  await mkdir(path.join(UPLOAD_DIR, month), { recursive: true });
+  await writeFile(path.join(UPLOAD_DIR, month, name), jpeg);
+  return `/uploads/${month}/${name}`;
+}
+
 /** Lee un archivo subido; `null` si la ruta no es válida. */
 export async function readUpload(segments: string[]) {
-  if (segments.length !== 2 || !/^\d{4}-\d{2}$/.test(segments[0]) || !/^[a-f0-9]{24}\.webp$/.test(segments[1])) return null;
+  if (segments.length !== 2 || !/^\d{4}-\d{2}$/.test(segments[0]) || !/^[a-f0-9]{24}\.(webp|jpg)$/.test(segments[1])) return null;
   return readFile(path.join(UPLOAD_DIR, segments[0], segments[1])).catch(() => null);
 }

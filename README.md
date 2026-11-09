@@ -114,6 +114,22 @@ Los correos salen por Azure Communication Services (`src/lib/email.ts`): confirm
 
 Las cuentas de comprador (`/registro?tipo=comprador`) guardan vehículos (sincronizados con los del navegador), búsquedas y alertas en `/cuenta`. `.github/workflows/daily-alerts.yml` corre `npm run alerts:send` cada mañana: a quien confirmó su correo y tiene las alertas activas le envía los vehículos publicados desde la última revisión que coinciden con sus búsquedas y las rebajas de sus guardados.
 
+## Redes sociales (Facebook e Instagram)
+
+Módulo para dealers cuyo plan tiene «Redes sociales» (`Plan.socialModule`, en `/admin/planes`). En `/panel/redes` el dealer conecta su página de Facebook (y la cuenta profesional de Instagram vinculada), elige si cada vehículo se publica solo la primera vez que pasa a publicado y ve las métricas: alcance, vistas e interacciones de cada publicación junto a las visitas al portal que llegaron desde redes (`utm_source` en el enlace, `SocialVisit`) y los contactos.
+
+El editor (`/panel/redes/plantilla` para el diseño por defecto, `/panel/vehiculos/[id]/redes` para un vehículo) tiene 8 plantillas, 3 formatos (1:1, 4:5, historia 9:16), selección y encuadre de fotos, textos con marcadores (`{titulo}`, `{precio}`…), 9 tipografías, combinaciones de colores, texto de la publicación con IA y descarga de la imagen. La vista previa y la imagen publicada salen de la misma plantilla (`src/lib/social/templates.tsx`); el servidor la genera con `next/og` y las fuentes de `@fontsource` (`src/lib/social/render.tsx`) y la guarda como JPEG en `/uploads`.
+
+Configuración: una app de Meta con «Inicio de sesión con Facebook para empresas» y los permisos de `META_SCOPES` (`src/lib/social/meta.ts`) aprobados en la revisión de la app; URI de redirección `{SITE_URL}/api/social/meta/callback`. Variables `META_APP_ID`, `META_APP_SECRET` y `SOCIAL_TOKEN_KEY` (`openssl rand -base64 32`; cifra los tokens de las páginas). Instagram descarga la imagen desde `SITE_URL`, así que en desarrollo la URL debe ser pública. `.github/workflows/social-metrics.yml` corre `npm run social:metrics` cada 6 horas (mismos secretos más `DATABASE_URL`).
+
+Facebook Marketplace no ofrece una API para que otras aplicaciones publiquen: los anuncios salen en la página y en Instagram.
+
+## Información legal y privacidad
+
+Las políticas están en `/legal` y las reclamaciones se registran en `/legal/contacto`, con atención desde `/admin/legal`. Ver [revisión legal y pasos pendientes](docs/revision-legal.md) antes de abrir contratación comercial. Configura la identidad real del operador con `LEGAL_OPERATOR_NAME`, `LEGAL_OPERATOR_RNC`, `LEGAL_OPERATOR_ADDRESS` y `LEGAL_CONTACT_EMAIL`; sin ellos no se habilitan planes pagados ni envío de alertas comerciales. No se publica la cédula completa del operador.
+
+La migración de esta entrega agrega evidencia de aceptación y reclamaciones, pide aceptación de condiciones a cuentas anteriores y desactiva alertas antiguas que venían activadas por defecto. Los usuarios pueden activarlas de nuevo voluntariamente. Se debe aplicar la migración antes de ejecutar el nuevo código.
+
 ## Pruebas
 
 ```bash
@@ -128,6 +144,7 @@ npm run build
 - `/sitemap.xml` consulta la base en cada petición e incluye vehículos publicados, sus fotos, dealers aprobados y las páginas públicas principales. Publicar, editar, pausar, vender o borrar se refleja en la próxima consulta, sin reconstruir el sitio. No se usa `updatedAt` como `lastmod`, porque también cambia por visitas y tasas de cambio. Si el catálogo alcanza 50.000 URLs o 50 MB de XML, hay que dividir el sitemap antes de superar ese límite.
 - `/robots.txt` permite el rastreo público y anuncia el sitemap. Paneles, acceso, registro, comparación, mapa y búsquedas con filtros avanzados quedan fuera del índice; las categorías y su paginación tienen URLs canónicas propias.
 - `SITE_URL` debe ser el origen público definitivo (por defecto `https://tucarroonline.com`), igual durante build y ejecución. Configúralo en las variables de GitHub Actions y en App Service si cambia el dominio. Redirige los dominios alternativos (incluido `www` y el host de Azure) al dominio definitivo en el proveedor de alojamiento.
+- Página oficial (plan con `officialSite`): cualquier otro host que llegue a la app se trata como dominio propio de un dealer (`src/proxy.ts`). La portada y las fichas de sus vehículos se sirven con su marca desde `src/app/sitio/[domain]`; el resto de rutas redirige a `SITE_URL`. Para activarlo, agrega el dominio y su `www` en App Service con certificado administrado, y asígnalo en Admin → Dealers → Editar. Sin plan vigente, el dominio redirige al perfil del dealer en el portal. En desarrollo se prueba con `http://<nombre>.localhost:3000`.
 
 Después del despliegue:
 

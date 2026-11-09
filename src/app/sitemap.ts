@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { db } from "@/lib/db";
 import { siteUrl } from "@/lib/seo";
 import { vehicleUrl } from "@/lib/urls";
+import { LEGAL_DOCUMENTS } from "@/lib/legal";
 
 // Consulta el inventario actual: publicar, pausar, vender o borrar se refleja en la siguiente petición.
 export const dynamic = "force-dynamic";
@@ -24,7 +25,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     db.dealer.findMany({ where: { status: "APPROVED" }, select: { slug: true }, orderBy: { slug: "asc" } }),
   ]);
   return [
-    ...["/", "/vehiculos", "/dealers", "/financiamiento", "/compra-segura", "/planes"].map((path) => ({ url: xmlUrl(path) })),
+    ...["/", "/vehiculos", "/dealers", "/financiamiento", "/compra-segura", "/planes", "/legal", "/legal/contacto", ...Object.keys(LEGAL_DOCUMENTS).map((slug) => `/legal/${slug}`)].map((path) => ({ url: xmlUrl(path) })),
     ...dealers.map((dealer) => ({ url: xmlUrl(`/dealers/${dealer.slug}`) })),
     // updatedAt también cambia por visitas y tasas: no es una fecha fiable de modificación del contenido.
     ...vehicles.map((vehicle) => ({ url: xmlUrl(vehicleUrl(vehicle)), images: vehicle.photos.map((photo) => xmlUrl(photo.url)) })),

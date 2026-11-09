@@ -14,6 +14,7 @@ const ITEMS: NavItem[] = [
   { href: "/admin/versiones", label: "Versiones", icon: <Layers className="size-4.5" aria-hidden /> },
   { href: "/admin/caracteristicas", label: "Características", icon: <ListChecks className="size-4.5" aria-hidden /> },
   { href: "/admin/planes", label: "Planes", icon: <CreditCard className="size-4.5" aria-hidden /> },
+  { href: "/admin/legal", label: "Reclamaciones y privacidad", icon: <ListChecks className="size-4.5" aria-hidden /> },
 ];
 
 export const metadata = { title: "Administración", robots: { index: false, follow: false } };

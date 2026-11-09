@@ -11,8 +11,11 @@ import { siteUrl } from "@/lib/seo";
 import { MAX_TEST_DRIVE_DAYS, testDriveWindow } from "@/lib/contact-request";
 import { vehicleTitle, vehicleUrl } from "@/lib/urls";
 import type { FormState } from "./auth";
+import { legalFields } from "@/lib/legal-validation";
+import { LEGAL_VERSION } from "@/lib/legal";
 
 const schema = z.object({
+  ...legalFields,
   kind: z.enum(["INFO", "TEST_DRIVE"]),
   name: z.string().trim().min(2, "Escribe tu nombre").max(80),
   phone: z
@@ -26,7 +29,7 @@ const schema = z.object({
 
 /** Solicitud «Me interesa» o de prueba de manejo desde la ficha: queda en el panel del vendedor y le llega por correo. */
 export async function requestContact(vehicleId: string, _: FormState, form: FormData): Promise<FormState> {
-  const done: FormState = { ok: "¡Enviado! El vendedor recibió tus datos y te contactará pronto." };
+  const done: FormState = { ok: "Solicitud registrada para el vendedor. La respuesta y cualquier cita deben confirmarse directamente con él." };
   // Campo trampa invisible: solo lo llenan los robots.
   if (form.get("website")) return done;
   const parsed = schema.safeParse({ email: "", preferredDate: "", message: "", ...Object.fromEntries(form) });
@@ -47,10 +50,11 @@ export async function requestContact(vehicleId: string, _: FormState, form: Form
   if (!vehicle || vehicle.status !== "ACTIVE") return { error: "Este vehículo ya no está disponible." };
 
   const preferredDate = date ? new Date(`${date}T00:00:00Z`) : null;
-  await db.$transaction([
-    db.contactRequest.create({ data: { vehicleId, kind: d.kind, name: d.name, phone: d.phone, email: d.email || null, message: d.message || null, preferredDate } }),
-    db.leadEvent.create({ data: { vehicleId, kind: "FORM" } }),
-  ]);
+  await db.$transaction(async (tx) => {
+    const request = await tx.contactRequest.create({ data: { vehicleId, kind: d.kind, name: d.name, phone: d.phone, email: d.email || null, message: d.message || null, preferredDate } });
+    await tx.leadEvent.create({ data: { vehicleId, kind: "FORM" } });
+    await tx.legalAcceptance.create({ data: { kind: "CONTACT", version: LEGAL_VERSION, subjectId: request.id, details: { vehicleId } } });
+  });
 
   const to = vehicle.dealer?.email ?? vehicle.owner.email;
   const title = `${vehicleTitle(vehicle)} ${vehicle.year}`;

@@ -18,7 +18,7 @@ import {
 } from "@/lib/labels";
 import type { Histogram } from "@/lib/histogram";
 import { cn } from "@/lib/cn";
-import { input, label } from "@/components/ui/styles";
+import { button, input, label } from "@/components/ui/styles";
 import { FUEL_ICON, TRANSMISSION_ICON } from "@/lib/spec-icons";
 import { FeatureIcon } from "@/lib/feature-icons";
 import { BodySilhouette } from "./body-silhouette";
@@ -87,6 +87,7 @@ function FilterForm({
 
   const apply = () => {
     const form = formRef.current!;
+    if (!form.reportValidity()) return;
     const data = new FormData(form);
     const params = new URLSearchParams();
     for (const [k, v] of data) {
@@ -124,12 +125,17 @@ function FilterForm({
       onChange={(e) => {
         // La búsqueda se aplica con Enter; los rangos, al soltar la manija.
         const type = (e.target as unknown as HTMLInputElement).type;
-        if (type === "search" || type === "range") return;
+        if (type === "search" || type === "range" || type === "number") return;
         apply();
       }}
       onSubmit={(e) => {
         e.preventDefault();
         apply();
+        const toggle = document.getElementById("filters-toggle") as HTMLInputElement | null;
+        if (toggle?.checked) {
+          toggle.checked = false;
+          toggle.focus({ preventScroll: true });
+        }
       }}
       className={cn("space-y-6 transition-opacity", pending && "opacity-60")}
       aria-busy={pending}
@@ -137,45 +143,39 @@ function FilterForm({
       {/* El texto libre se escribe en el buscador de arriba; aquí solo se conserva al cambiar filtros. */}
       {values.q && <input type="hidden" name="q" value={values.q} />}
 
-      <fieldset>
-        <legend className={label}>Condición</legend>
-        <div className="grid grid-cols-3 rounded-lg border border-line bg-surface p-1">
-          {[
-            ["", "Todos"],
-            ["nuevo", "Nuevo"],
-            ["usado", "Usado"],
-          ].map(([v, l]) => (
-            <label key={v} className="cursor-pointer">
-              <input type="radio" name="condicion" value={v} defaultChecked={(values.condicion ?? "") === v} className="peer sr-only" />
-              <span className="block rounded-md py-2 text-center text-sm font-semibold text-muted peer-checked:bg-brand peer-checked:text-brand-ink peer-focus-visible:ring-2 peer-focus-visible:ring-accent">
-                {l}
-              </span>
-            </label>
-          ))}
-        </div>
-      </fieldset>
-
-      <fieldset>
-        <legend className={label}>Tipo de vehículo</legend>
-        <div className="grid grid-cols-2 gap-2">
-          <label className="cursor-pointer">
-            <input type="radio" name="tipo" value="" defaultChecked={!values.tipo} className="peer sr-only" />
-            <span className="flex h-full items-center justify-center rounded-lg border border-line bg-surface p-2 text-sm font-semibold peer-checked:border-brand peer-checked:bg-brand/10 peer-focus-visible:ring-2 peer-focus-visible:ring-accent">
-              Todos
-            </span>
-          </label>
-          {BODY_TYPES.map((t) => (
-            <label key={t.value} className="cursor-pointer">
-              <input type="radio" name="tipo" value={t.value.toLowerCase()} defaultChecked={values.tipo === t.value.toLowerCase()} className="peer sr-only" />
-              <span className="flex flex-col items-center rounded-lg border border-line bg-surface p-2 text-center peer-checked:border-brand peer-checked:bg-brand/10 peer-focus-visible:ring-2 peer-focus-visible:ring-accent">
-                <BodySilhouette type={t.value} className="h-6 w-16 text-ink [--glass:var(--surface)] [--rim:var(--surface)] [--tire:var(--ink)]" />
-                <span className="mt-1 text-xs font-semibold">{t.label}</span>
-                <span className="text-[11px] text-muted">{typeCounts[t.value] ?? 0}</span>
-              </span>
-            </label>
-          ))}
-        </div>
-      </fieldset>
+      <div>
+        <fieldset className="mb-2 flex items-center justify-between">
+          <legend className="sr-only">Moneda del precio</legend>
+          <span aria-hidden className="text-sm font-medium">
+            Moneda
+          </span>
+          <span className="grid grid-cols-2 rounded-lg border border-line bg-surface p-0.5">
+            {[
+              ["", "RD$"],
+              ["usd", "US$"],
+            ].map(([v, l]) => (
+              <label key={v} className="cursor-pointer">
+                <input type="radio" name="moneda" value={v} defaultChecked={(values.moneda ?? "") === v} className="peer sr-only" />
+                <span className="block rounded-md px-3 py-1 text-xs font-bold text-muted peer-checked:bg-brand peer-checked:text-brand-ink peer-focus-visible:ring-2 peer-focus-visible:ring-accent">
+                  {l}
+                </span>
+              </label>
+            ))}
+          </span>
+        </fieldset>
+        <RangeHistogram
+          inputScale={usd ? usdRate : 1}
+          legend={usd ? "Precio (US$)" : "Precio (RD$)"}
+          names={["precioMin", "precioMax"]}
+          histogram={prices}
+          value={[values.precioMin, values.precioMax]}
+          format={(n) => (usd ? formatPrice(toUsd(n, usdRate), "USD") : formatPrice(n, "DOP"))}
+          onCommit={apply}
+        />
+        <p className="mt-1 text-xs text-muted">
+          {usd ? `Equivalente a la tasa del día (${formatRate(usdRate)} por dólar).` : "Precios en US$ se convierten a RD$ para comparar."}
+        </p>
+      </div>
 
       <div className="space-y-4">
         <BrandPicker
@@ -217,39 +217,6 @@ function FilterForm({
         )}
       </div>
 
-      <div>
-        <fieldset className="mb-2 flex items-center justify-between">
-          <legend className="sr-only">Moneda del precio</legend>
-          <span aria-hidden className="text-sm font-medium">
-            Moneda
-          </span>
-          <span className="grid grid-cols-2 rounded-lg border border-line bg-surface p-0.5">
-            {[
-              ["", "RD$"],
-              ["usd", "US$"],
-            ].map(([v, l]) => (
-              <label key={v} className="cursor-pointer">
-                <input type="radio" name="moneda" value={v} defaultChecked={(values.moneda ?? "") === v} className="peer sr-only" />
-                <span className="block rounded-md px-3 py-1 text-xs font-bold text-muted peer-checked:bg-brand peer-checked:text-brand-ink peer-focus-visible:ring-2 peer-focus-visible:ring-accent">
-                  {l}
-                </span>
-              </label>
-            ))}
-          </span>
-        </fieldset>
-        <RangeHistogram
-          legend={usd ? "Precio (US$)" : "Precio (RD$)"}
-          names={["precioMin", "precioMax"]}
-          histogram={prices}
-          value={[values.precioMin, values.precioMax]}
-          format={(n) => (usd ? formatPrice(toUsd(n, usdRate), "USD") : formatPrice(n, "DOP"))}
-          onCommit={apply}
-        />
-        <p className="mt-1 text-xs text-muted">
-          {usd ? `Equivalente a la tasa del día (${formatRate(usdRate)} por dólar).` : "Precios en US$ se convierten a RD$ para comparar."}
-        </p>
-      </div>
-
       <RangeHistogram
         legend="Año"
         names={["anioMin", "anioMax"]}
@@ -260,43 +227,96 @@ function FilterForm({
         onCommit={apply}
       />
 
-      <ChoiceChips
-        name="kmMax"
-        legend="Kilometraje máximo"
-        value={values.kmMax}
-        allLabel="Sin límite"
-        options={KMS.map((k) => ({ value: String(k), label: `${k / 1000} mil km` }))}
-      />
-      <ChoiceChips
-        name="transmision"
-        legend="Transmisión"
-        value={values.transmision}
-        allLabel="Todas"
-        options={Object.entries(TRANSMISSION_LABEL).map(([k, v]) => ({ value: k.toLowerCase(), label: v, icon: TRANSMISSION_ICON[k as keyof typeof TRANSMISSION_ICON] }))}
-      />
-      <ChoiceChips
-        name="combustible"
-        legend="Combustible"
-        value={values.combustible}
-        options={Object.entries(FUEL_LABEL).map(([k, v]) => ({ value: k.toLowerCase(), label: v, icon: FUEL_ICON[k as keyof typeof FUEL_ICON] }))}
-      />
-      <ChoiceChips
-        name="traccion"
-        legend="Tracción"
-        value={values.traccion}
-        allLabel="Todas"
-        options={Object.entries(DRIVETRAIN_LABEL).map(([k, v]) => ({ value: k.toLowerCase(), label: v }))}
-      />
-      <ColorSwatches value={values.color} />
       {select("provincia", "Provincia", provinces.map((p) => [p, p]), "Todo el país")}
 
-      <FeatureFilter features={features} selected={selectedFeatures} query={featureQuery} onQuery={onFeatureQuery} />
+      <fieldset>
+        <legend className={label}>Condición</legend>
+        <div className="grid grid-cols-3 rounded-lg border border-line bg-surface p-1">
+          {[
+            ["", "Todos"],
+            ["nuevo", "Nuevo"],
+            ["usado", "Usado"],
+          ].map(([v, l]) => (
+            <label key={v} className="cursor-pointer">
+              <input type="radio" name="condicion" value={v} defaultChecked={(values.condicion ?? "") === v} className="peer sr-only" />
+              <span className="block rounded-md py-2 text-center text-sm font-semibold text-muted peer-checked:bg-brand peer-checked:text-brand-ink peer-focus-visible:ring-2 peer-focus-visible:ring-accent">
+                {l}
+              </span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
 
-      <noscript>
-        <button type="submit" className="w-full rounded-lg bg-brand py-3 font-semibold text-brand-ink">
-          Aplicar filtros
-        </button>
-      </noscript>
+      <details open={!!values.tipo} className="group rounded-xl border border-line bg-surface p-4">
+        <summary className="flex min-h-6 cursor-pointer list-none items-center justify-between text-sm font-semibold [&::-webkit-details-marker]:hidden">
+          Tipo de vehículo
+          <ChevronDown className="size-4 transition-transform group-open:rotate-180" aria-hidden />
+        </summary>
+        <div className="mt-4">
+          <fieldset>
+            <legend className="sr-only">Tipo de vehículo</legend>
+            <div className="grid grid-cols-2 gap-2">
+              <label className="cursor-pointer">
+                <input type="radio" name="tipo" value="" defaultChecked={!values.tipo} className="peer sr-only" />
+                <span className="flex h-full items-center justify-center rounded-lg border border-line bg-surface p-2 text-sm font-semibold peer-checked:border-brand peer-checked:bg-brand/10 peer-focus-visible:ring-2 peer-focus-visible:ring-accent">
+                  Todos
+                </span>
+              </label>
+              {BODY_TYPES.map((t) => (
+                <label key={t.value} className="cursor-pointer">
+                  <input type="radio" name="tipo" value={t.value.toLowerCase()} defaultChecked={values.tipo === t.value.toLowerCase()} className="peer sr-only" />
+                  <span className="flex flex-col items-center rounded-lg border border-line bg-surface p-2 text-center peer-checked:border-brand peer-checked:bg-brand/10 peer-focus-visible:ring-2 peer-focus-visible:ring-accent">
+                    <BodySilhouette type={t.value} className="h-6 w-16 text-ink [--glass:var(--surface)] [--rim:var(--surface)] [--tire:var(--ink)]" />
+                    <span className="mt-1 text-xs font-semibold">{t.label}</span>
+                    <span className="text-[11px] text-muted">{typeCounts[t.value] ?? 0}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+
+        </div>
+      </details>
+      <details open={["kmMax", "transmision", "combustible", "traccion", "color"].some((key) => !!values[key]) || selectedFeatures.length > 0} className="group rounded-xl border border-line bg-surface p-4">
+        <summary className="flex min-h-6 cursor-pointer list-none items-center justify-between text-sm font-semibold [&::-webkit-details-marker]:hidden">
+          Más filtros
+          <ChevronDown className="size-4 transition-transform group-open:rotate-180" aria-hidden />
+        </summary>
+        <div className="mt-5 space-y-6">
+          <ChoiceChips
+            name="kmMax"
+            legend="Kilometraje máximo"
+            value={values.kmMax}
+            allLabel="Sin límite"
+            options={KMS.map((k) => ({ value: String(k), label: `${k / 1000} mil km` }))}
+          />
+          <ChoiceChips
+            name="transmision"
+            legend="Transmisión"
+            value={values.transmision}
+            allLabel="Todas"
+            options={Object.entries(TRANSMISSION_LABEL).map(([k, v]) => ({ value: k.toLowerCase(), label: v, icon: TRANSMISSION_ICON[k as keyof typeof TRANSMISSION_ICON] }))}
+          />
+          <ChoiceChips
+            name="combustible"
+            legend="Combustible"
+            value={values.combustible}
+            options={Object.entries(FUEL_LABEL).map(([k, v]) => ({ value: k.toLowerCase(), label: v, icon: FUEL_ICON[k as keyof typeof FUEL_ICON] }))}
+          />
+          <ChoiceChips
+            name="traccion"
+            legend="Tracción"
+            value={values.traccion}
+            allLabel="Todas"
+            options={Object.entries(DRIVETRAIN_LABEL).map(([k, v]) => ({ value: k.toLowerCase(), label: v }))}
+          />
+          <ColorSwatches value={values.color} />
+
+          <FeatureFilter features={features} selected={selectedFeatures} query={featureQuery} onQuery={onFeatureQuery} />
+        </div>
+      </details>
+
+      <button type="submit" className={cn(button("brand", "md"), "w-full")}>Ver resultados</button>
     </form>
   );
 }
