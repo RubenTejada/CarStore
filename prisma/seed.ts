@@ -5,6 +5,7 @@ import { PrismaClient } from "../src/generated/prisma/client";
 import type { BodyType, Drivetrain, FeatureCategory, Fuel, Transmission } from "../src/generated/prisma/enums";
 import { USD_TO_DOP, slugify, toDop } from "../src/lib/labels";
 import { PROVINCES } from "../src/lib/provinces";
+import { PLAN_CATALOG } from "../src/lib/plan-catalog";
 
 const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }) });
 
@@ -441,13 +442,9 @@ async function main() {
 
   // Planes
   // El plan Gratis (5 vehículos) no es un registro: aplica a toda cuenta sin plan pagado (ver FREE_PLAN).
-  const [pro, dealerStd, , dealerPremium] = await Promise.all([
-    db.plan.create({ data: { name: "Pro", description: "Más vehículos y destacados en la portada.", priceDop: 500, maxActiveListings: 15, featuredSlots: 2, durationDays: 60 } }),
-    db.plan.create({ data: { name: "Dealer Estándar", description: "Inventario mediano con perfil de dealer y mapa.", priceDop: 3_500, maxActiveListings: 40, featuredSlots: 3, durationDays: 30, forDealers: true } }),
-    db.plan.create({ data: { name: "Dealer Plus", description: "Más inventario y más destacados en la portada.", priceDop: 5_500, maxActiveListings: 80, featuredSlots: 6, durationDays: 30, forDealers: true } }),
-    db.plan.create({ data: { name: "Dealer Premium", description: "Inventario amplio y máxima visibilidad en la portada.", priceDop: 7_500, maxActiveListings: 150, featuredSlots: 12, durationDays: 30, forDealers: true, socialModule: true } }),
-    db.plan.create({ data: { name: "Página Oficial", description: "Tu inventario con tu marca: tu logo y tu propio dominio.", priceDop: 10_000, maxActiveListings: 250, featuredSlots: 20, durationDays: 30, forDealers: true, officialSite: true, socialModule: true } }),
-  ]);
+  const plans = await Promise.all(PLAN_CATALOG.map((data) => db.plan.create({ data })));
+  const plan = (name: string) => plans.find((p) => p.name === name)!;
+  const [pro, dealerStd, dealerPremium] = [plan("Pro"), plan("Dealer Estándar"), plan("Dealer Premium")];
 
   // Usuarios
   const admin = await db.user.create({

@@ -15,7 +15,8 @@
     "rates:update": "tsx scripts/update-rates.ts",
     "alerts:send": "tsx scripts/send-alerts.ts",
     "social:metrics": "tsx scripts/social-metrics.ts",
-    "demo:dealer": "tsx scripts/create-demo-dealer.ts"
+    "demo:dealer": "tsx scripts/create-demo-dealer.ts",
+    "plans:sync": "tsx scripts/sync-plans.ts"
   },
   "dependencies": {
     "@anthropic-ai/foundry-sdk": "^0.5.4",

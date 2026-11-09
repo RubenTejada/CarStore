@@ -1,0 +1,57 @@
+name: Planes
+
+# Deja los planes de producción como el catálogo de src/lib/plan-catalog.ts (scripts/sync-plans.ts).
+# Sin «aplicar» solo muestra lo que haría; el resumen queda en la página de la ejecución.
+#
+# Secretos del repositorio (Settings → Secrets and variables → Actions):
+#   DATABASE_URL       base de datos de producción
+#   AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID   para abrir el firewall de la base (ver deploy.yml)
+
+on:
+  workflow_dispatch:
+    inputs:
+      aplicar:
+        description: "Escribir en la base (si no, solo simula)"
+        type: boolean
+        default: false
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: sync-plans
+  cancel-in-progress: false
+
+jobs:
+  plans:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      # El firewall de la base solo admite servicios de Azure: se abre a la IP de este runner.
+      - name: Abrir firewall de la base
+        run: |
+          IP=$(curl -fsS https://api.ipify.org)
+          az postgres flexible-server firewall-rule create -g nexconta --server-name nexconta-db-b \
+            -n gh-plans-${{ github.run_id }} --start-ip-address $IP --end-ip-address $IP -o none
+      - name: Sincronizar planes
+        run: npm run plans:sync -- ${{ inputs.aplicar && '--yes' || '' }}
+        env:
+          NODE_ENV: production
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      - name: Cerrar firewall de la base
+        if: always()
+        run: |
+          az postgres flexible-server firewall-rule delete -g nexconta --server-name nexconta-db-b \
+            -n gh-plans-${{ github.run_id }} --yes -o none || true

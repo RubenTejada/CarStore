@@ -7,6 +7,7 @@ import { inventoryChanged } from "@/lib/inventory-cache";
 import { requireUser } from "@/lib/auth";
 import { slugify } from "@/lib/labels";
 import { normalizeDomain, portalDomain } from "@/lib/site-host";
+import { contractChanged } from "@/lib/plan-catalog";
 import { FEATURE_ICON_KEYS } from "@/lib/feature-icons";
 import { BodyType, DealerStatus, FeatureCategory } from "@/generated/prisma/enums";
 import type { FormState } from "./auth";
@@ -231,8 +232,7 @@ export async function savePlan(id: string | null, _: FormState, form: FormData):
     const current = await db.plan.findUnique({ where: { id } });
     if (!current) return { error: "Plan no encontrado." };
     const d = parsed.data;
-    const contractualChange = current.priceDop !== d.priceDop || current.maxActiveListings !== d.maxActiveListings || current.featuredSlots !== d.featuredSlots || current.durationDays !== d.durationDays || current.forDealers !== d.forDealers || current.officialSite !== d.officialSite || current.socialModule !== d.socialModule;
-    if (contractualChange && await db.subscription.count({ where: { planId: id, status: { in: ["PENDING", "ACTIVE"] } } }))
+    if (contractChanged(current, d) && await db.subscription.count({ where: { planId: id, status: { in: ["PENDING", "ACTIVE"] } } }))
       return { error: "Este plan tiene solicitudes o períodos contratados. Crea un plan nuevo para cambiar precio, cupos, duración, destinatarios, página oficial o módulo de redes sin alterar contratos existentes." };
     await db.plan.update({ where: { id }, data: d });
   }
