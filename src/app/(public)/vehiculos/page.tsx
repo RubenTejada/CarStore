@@ -147,7 +147,7 @@ export default async function VehiclesPage({ searchParams }: PageProps<"/vehicul
           </aside>
 
           <section aria-label="Resultados">
-            <div className="mb-4 flex flex-wrap items-center justify-end gap-2">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
               <SortSelect value={f.orden ?? "recientes"} />
               <nav className="flex rounded-lg border border-line bg-surface p-1" aria-label="Vista">
                 <Link
