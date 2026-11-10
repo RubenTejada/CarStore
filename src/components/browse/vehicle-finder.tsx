@@ -113,14 +113,15 @@ export function VehicleFinder({ brands }: { brands: FinderBrand[] }) {
 
   return (
     <div className="text-white">
-      <div className="flex flex-wrap items-center gap-3">
+      {/* items-start: el buscador lleva una nota debajo del campo; los botones se alinean con el campo, no con la nota. */}
+      <div className="flex flex-wrap items-start gap-3">
         <SearchBox
           tone="dark"
           params={Object.fromEntries(new URLSearchParams(params({})))}
           placeholder="Marca, modelo, versión o tipo: jeepeta Toyota 2020"
           className="min-w-0 flex-1 basis-72"
         />
-        <div role="radiogroup" aria-label="Condición" className="flex rounded-xl border border-white/15 bg-white/5 p-1">
+        <div role="radiogroup" aria-label="Condición" className="flex h-13 rounded-xl border border-white/15 bg-white/5 p-1">
           {(
             [
               ["", "Todos"],
@@ -135,7 +136,7 @@ export function VehicleFinder({ brands }: { brands: FinderBrand[] }) {
               aria-checked={condition === value}
               onClick={() => setCondition(value)}
               className={cn(
-                "h-11 rounded-lg px-4 text-sm font-semibold transition-colors",
+                "h-full rounded-lg px-4 text-sm font-semibold transition-colors",
                 condition === value ? "bg-white text-night" : "text-white/75 hover:text-white",
               )}
             >

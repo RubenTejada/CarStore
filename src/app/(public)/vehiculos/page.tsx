@@ -91,29 +91,6 @@ export default async function VehiclesPage({ searchParams }: PageProps<"/vehicul
       <PageHeader
         title={heading}
         description={result.total === 1 ? "1 vehículo encontrado" : `${result.total.toLocaleString("es-DO")} vehículos encontrados`}
-        actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <SortSelect value={f.orden ?? "recientes"} />
-            <nav className="flex rounded-lg border border-line bg-surface p-1" aria-label="Vista">
-              <Link
-                href={toQueryString(f, { vista: undefined, pagina: undefined }) || "?"}
-                aria-current={!mapMode ? "page" : undefined}
-                className={cn("flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-semibold", !mapMode ? "bg-brand text-brand-ink" : "text-muted hover:text-ink")}
-              >
-                <LayoutGrid className="size-4" aria-hidden />
-                Lista
-              </Link>
-              <Link
-                href={toQueryString(f, { vista: "mapa", pagina: undefined })}
-                aria-current={mapMode ? "page" : undefined}
-                className={cn("flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-semibold", mapMode ? "bg-brand text-brand-ink" : "text-muted hover:text-ink")}
-              >
-                <MapIcon className="size-4" aria-hidden />
-                Mapa
-              </Link>
-            </nav>
-          </div>
-        }
       >
         <SearchBox key={qs} params={values} defaultValue={f.q} tone={LOOK === "banda" ? "dark" : "light"} className="mt-5 max-w-2xl" />
       </PageHeader>
@@ -170,6 +147,27 @@ export default async function VehiclesPage({ searchParams }: PageProps<"/vehicul
           </aside>
 
           <section aria-label="Resultados">
+            <div className="mb-4 flex flex-wrap items-center justify-end gap-2">
+              <SortSelect value={f.orden ?? "recientes"} />
+              <nav className="flex rounded-lg border border-line bg-surface p-1" aria-label="Vista">
+                <Link
+                  href={toQueryString(f, { vista: undefined, pagina: undefined }) || "?"}
+                  aria-current={!mapMode ? "page" : undefined}
+                  className={cn("flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-semibold", !mapMode ? "bg-brand text-brand-ink" : "text-muted hover:text-ink")}
+                >
+                  <LayoutGrid className="size-4" aria-hidden />
+                  Lista
+                </Link>
+                <Link
+                  href={toQueryString(f, { vista: "mapa", pagina: undefined })}
+                  aria-current={mapMode ? "page" : undefined}
+                  className={cn("flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-semibold", mapMode ? "bg-brand text-brand-ink" : "text-muted hover:text-ink")}
+                >
+                  <MapIcon className="size-4" aria-hidden />
+                  Mapa
+                </Link>
+              </nav>
+            </div>
             {mapMode ? (
               <MapView
                 className="h-[70vh] min-h-96"
